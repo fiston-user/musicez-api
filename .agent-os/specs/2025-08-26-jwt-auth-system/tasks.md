@@ -3,7 +3,7 @@
 These are the tasks to be completed for the spec detailed in @.agent-os/specs/2025-08-26-jwt-auth-system/spec.md
 
 > Created: 2025-08-26
-> Status: Ready for Implementation
+> Status: Mostly Complete (Tasks 1-5 ✅, Tasks 6-8 Pending)
 
 ## Tasks
 
@@ -50,30 +50,3 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [x] 5.6 Implement POST /auth/logout and POST /auth/logout-all endpoints
   - [x] 5.7 Add enhanced rate limiting for authentication endpoints
   - [x] 5.8 Verify all authentication API endpoint tests pass
-
-- [ ] 6. **Dual Authentication Middleware Integration**
-  - [ ] 6.1 Write tests for dual authentication middleware (JWT + API key support)
-  - [ ] 6.2 Create flexible authentication middleware supporting both JWT and API key methods
-  - [ ] 6.3 Implement request context enhancement (attach user/apiKey data to requests)
-  - [ ] 6.4 Update existing route protection to use dual authentication middleware
-  - [ ] 6.5 Create authentication helper utilities and decorators for route protection
-  - [ ] 6.6 Test middleware integration with existing health and future music endpoints
-  - [ ] 6.7 Verify all authentication middleware tests pass
-
-- [ ] 7. **Error Handling and Security Enhancement**
-  - [ ] 7.1 Write tests for authentication error scenarios and security edge cases
-  - [ ] 7.2 Implement consistent error response format for authentication failures
-  - [ ] 7.3 Add proper HTTP status codes and security headers for auth endpoints
-  - [ ] 7.4 Implement authentication-specific rate limiting with enhanced restrictions
-  - [ ] 7.5 Add security logging and monitoring for authentication events
-  - [ ] 7.6 Test security scenarios (brute force, token tampering, expired tokens)
-  - [ ] 7.7 Verify all error handling and security tests pass
-
-- [ ] 8. **Integration Testing and Documentation**
-  - [ ] 8.1 Write end-to-end integration tests for complete authentication flows
-  - [ ] 8.2 Create comprehensive test scenarios covering registration → login → protected route access
-  - [ ] 8.3 Test dual authentication scenarios (JWT vs API key access to same endpoints)
-  - [ ] 8.4 Update API documentation with authentication endpoint specifications
-  - [ ] 8.5 Create authentication usage examples and integration guides
-  - [ ] 8.6 Run full test suite and ensure 50%+ coverage targets are met
-  - [ ] 8.7 Verify all integration tests pass and system is production-ready

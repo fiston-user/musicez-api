@@ -1,4 +1,5 @@
 import { config } from './environment';
+import Redis from 'ioredis';
 
 // Redis client interface for dependency injection and testing
 export interface RedisClient {
@@ -67,57 +68,143 @@ class MockRedis implements RedisClient {
   }
 }
 
-// Real Redis implementation (to be implemented when Redis is fully integrated)
+// Real Redis implementation using ioredis
 class RealRedis implements RedisClient {
-  async setex(_key: string, _ttl: number, _value: string): Promise<string> {
-    // TODO: Implement real Redis connection
-    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  private client: Redis;
+
+  constructor(redisUrl: string) {
+    this.client = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => {
+        if (times > 3) {
+          console.error('❌ Redis connection failed after 3 retries');
+          return null; // Stop retrying
+        }
+        const delay = Math.min(times * 100, 2000);
+        console.log(`⏳ Retrying Redis connection in ${delay}ms...`);
+        return delay;
+      }
+    });
+
+    // Handle connection events
+    this.client.on('connect', () => {
+      console.log('✅ Redis connected successfully');
+    });
+
+    this.client.on('error', (error) => {
+      console.error('❌ Redis connection error:', error.message);
+    });
+
+    this.client.on('close', () => {
+      console.log('Redis connection closed');
+    });
+
+    this.client.on('ready', () => {
+      console.log('✅ Redis is ready to accept commands');
+    });
   }
 
-  async get(_key: string): Promise<string | null> {
-    // TODO: Implement real Redis connection
-    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  async setex(key: string, ttl: number, value: string): Promise<string> {
+    const result = await this.client.setex(key, ttl, value);
+    return result;
   }
 
-  async del(_key: string): Promise<number> {
-    // TODO: Implement real Redis connection
-    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  async get(key: string): Promise<string | null> {
+    return await this.client.get(key);
   }
 
-  async keys(_pattern: string): Promise<string[]> {
-    // TODO: Implement real Redis connection
-    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  async del(key: string): Promise<number> {
+    return await this.client.del(key);
   }
 
-  async exists(_key: string): Promise<number> {
-    // TODO: Implement real Redis connection
-    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  async keys(pattern: string): Promise<string[]> {
+    return await this.client.keys(pattern);
   }
 
-  async expire(_key: string, _ttl: number): Promise<number> {
-    // TODO: Implement real Redis connection
-    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  async exists(key: string): Promise<number> {
+    return await this.client.exists(key);
   }
 
-  async ttl(_key: string): Promise<number> {
-    // TODO: Implement real Redis connection
-    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  async expire(key: string, ttl: number): Promise<number> {
+    return await this.client.expire(key, ttl);
+  }
+
+  async ttl(key: string): Promise<number> {
+    return await this.client.ttl(key);
+  }
+
+  async quit(): Promise<void> {
+    await this.client.quit();
   }
 }
 
 /**
  * Creates Redis client based on configuration
- * For now, uses mock implementation. Will be replaced with real Redis client in Task 4.
+ * Uses real Redis client when URL is configured, otherwise falls back to mock for testing
  */
 function createRedisClient(): RedisClient {
   // In test environment or when Redis URL is not configured, use mock
   if (config.app.isTest || !config.redis.url) {
+    console.log('📝 Using Mock Redis client for testing/development');
     return new MockRedis();
   }
   
-  // For production, would use real Redis client
-  return new RealRedis();
+  // Use real Redis client when URL is configured
+  console.log('🔗 Connecting to Redis at:', config.redis.url);
+  return new RealRedis(config.redis.url);
 }
 
 // Export Redis client instance
 export const redis = createRedisClient();
+
+// Initialize Redis connection
+export async function initializeRedis(): Promise<void> {
+  // Skip initialization for mock Redis
+  if (config.app.isTest || !config.redis.url) {
+    return;
+  }
+  
+  try {
+    // Perform a simple operation to trigger connection
+    await redis.setex('init_check', 5, 'initializing');
+    await redis.del('init_check');
+    console.log('✅ Redis initialization complete');
+  } catch (error) {
+    console.error('❌ Failed to initialize Redis:', error);
+    throw error;
+  }
+}
+
+// Health check for Redis connection
+export async function checkRedisHealth() {
+  try {
+    const startTime = Date.now();
+    await redis.setex('health_check', 10, 'ok');
+    const result = await redis.get('health_check');
+    await redis.del('health_check');
+    const latency = Date.now() - startTime;
+    
+    return {
+      connected: result === 'ok',
+      latency,
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      latency: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+// Graceful shutdown for Redis
+export async function disconnectRedis() {
+  try {
+    if (redis.quit) {
+      await redis.quit();
+      console.log('Redis disconnected gracefully');
+    }
+  } catch (error) {
+    console.error('Error disconnecting Redis:', error);
+  }
+}

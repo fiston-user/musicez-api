@@ -1,7 +1,7 @@
-import { Router, Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
-import { PrismaClient } from '@prisma/client';
-import { 
+import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
+import { prisma } from "../database/prisma";
+import {
   validateRequest,
   registerRequestSchema,
   loginRequestSchema,
@@ -12,23 +12,22 @@ import {
   type LoginRequest,
   type RefreshTokenRequest,
   type LogoutRequest,
-  type LogoutAllRequest
-} from '../schemas/auth.schemas';
-import { hashPassword, comparePassword } from '../utils/password-security';
-import { 
-  generateAccessToken, 
+  type LogoutAllRequest,
+} from "../schemas/auth.schemas";
+import { hashPassword, comparePassword } from "../utils/password-security";
+import {
+  generateAccessToken,
   generateRefreshToken,
   refreshTokens,
   revokeRefreshToken,
   revokeAllUserTokens,
-  type TokenUser
-} from '../utils/jwt-token';
-import logger from '../utils/logger';
-import { redis } from '../config/redis';
-import { config } from '../config/environment';
+  type TokenUser,
+} from "../utils/jwt-token";
+import logger from "../utils/logger";
+import { redis } from "../config/redis";
+import { config } from "../config/environment";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Enhanced rate limiting for authentication endpoints
 const authRateLimit = rateLimit({
@@ -37,8 +36,8 @@ const authRateLimit = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Too many authentication attempts. Please try again later.',
+      code: "RATE_LIMIT_EXCEEDED",
+      message: "Too many authentication attempts. Please try again later.",
     },
   },
   standardHeaders: true,
@@ -56,8 +55,8 @@ const loginRateLimit = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'LOGIN_RATE_LIMIT_EXCEEDED',
-      message: 'Too many failed login attempts. Please try again later.',
+      code: "LOGIN_RATE_LIMIT_EXCEEDED",
+      message: "Too many failed login attempts. Please try again later.",
     },
   },
   standardHeaders: true,
@@ -75,12 +74,12 @@ const apiResponse = (success: boolean, data?: any, error?: any) => ({
   success,
   data: data || undefined,
   error: error || undefined,
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
 });
 
 // Register endpoint
 router.post(
-  '/register',
+  "/register",
   authRateLimit,
   validateRequest(registerRequestSchema),
   async (req: Request<{}, any, RegisterRequest>, res: Response) => {
@@ -89,19 +88,17 @@ router.post(
 
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() }
+        where: { email: email.toLowerCase() },
       });
 
       if (existingUser) {
-        return res.status(400).json(apiResponse(
-          false,
-          null,
-          {
-            code: 'USER_ALREADY_EXISTS',
-            message: 'A user with this email already exists',
-            field: 'email'
-          }
-        ));
+        return res.status(409).json(
+          apiResponse(false, null, {
+            code: "EMAIL_ALREADY_EXISTS",
+            message: "An account with this email address is already registered",
+            field: "email",
+          })
+        );
       }
 
       // Hash password
@@ -112,26 +109,27 @@ router.post(
         data: {
           email: email.toLowerCase(),
           password: hashedPassword,
-          name
+          name,
         },
         select: {
           id: true,
           email: true,
           name: true,
-          createdAt: true
-        }
+          emailVerified: true,
+          createdAt: true,
+        },
       });
 
       // Ensure email is not null for token creation
       if (!user.email) {
-        throw new Error('User email is required for token creation');
+        throw new Error("User email is required for token creation");
       }
 
       // Create TokenUser object for JWT functions
       const tokenUser: TokenUser = {
         id: user.id,
         email: user.email,
-        name: user.name ?? undefined
+        name: user.name ?? undefined,
       };
 
       // Generate tokens
@@ -141,56 +139,53 @@ router.post(
       // Store refresh token in Redis
       await redis.setex(
         `refresh_token:${user.id}:${refreshTokenData.token}`,
-        30 * 24 * 60 * 60, // 30 days
+        604800, // 7 days
         JSON.stringify({
           userData: tokenUser,
-          deviceInfo: req.get('User-Agent'),
+          deviceInfo: req.get("User-Agent"),
           issuedAt: refreshTokenData.issuedAt,
-          expiresAt: refreshTokenData.expiresAt
+          expiresAt: refreshTokenData.expiresAt,
         })
       );
 
-      logger.info('User registered successfully', { 
+      logger.info("User registered successfully", {
         userId: user.id,
         email: user.email,
         ip: req.ip,
-        userAgent: req.get('User-Agent')
+        userAgent: req.get("User-Agent"),
       });
 
-      return res.status(201).json(apiResponse(
-        true,
-        {
+      return res.status(201).json(
+        apiResponse(true, {
           user,
           tokens: {
             accessToken,
             refreshToken: refreshTokenData.token,
-            expiresIn: config.security.jwt.expiresIn
-          }
-        }
-      ));
-
+            expiresIn: 900, // 15 minutes in seconds
+            tokenType: "Bearer",
+          },
+        })
+      );
     } catch (error) {
-      logger.error('Registration failed', { 
-        error: error instanceof Error ? error.message : 'Unknown error',
+      logger.error("Registration failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
         email: req.body?.email,
-        ip: req.ip 
+        ip: req.ip,
       });
-      
-      return res.status(500).json(apiResponse(
-        false,
-        null,
-        {
-          code: 'REGISTRATION_FAILED',
-          message: 'Registration failed. Please try again.'
-        }
-      ));
+
+      return res.status(500).json(
+        apiResponse(false, null, {
+          code: "REGISTRATION_FAILED",
+          message: "Registration failed. Please try again.",
+        })
+      );
     }
   }
 );
 
 // Login endpoint
 router.post(
-  '/login',
+  "/login",
   loginRateLimit,
   validateRequest(loginRequestSchema),
   async (req: Request<{}, any, LoginRequest>, res: Response) => {
@@ -199,31 +194,29 @@ router.post(
 
       // Find user
       const user = await prisma.user.findUnique({
-        where: { 
-          email: email.toLowerCase()
-        }
+        where: {
+          email: email.toLowerCase(),
+        },
       });
 
-      if (!user || !await comparePassword(password, user.password)) {
-        logger.warn('Failed login attempt', {
+      if (!user || !(await comparePassword(password, user.password))) {
+        logger.warn("Failed login attempt", {
           email,
           ip: req.ip,
-          userAgent: req.get('User-Agent')
+          userAgent: req.get("User-Agent"),
         });
 
-        return res.status(401).json(apiResponse(
-          false,
-          null,
-          {
-            code: 'INVALID_CREDENTIALS',
-            message: 'Invalid email or password'
-          }
-        ));
+        return res.status(401).json(
+          apiResponse(false, null, {
+            code: "INVALID_CREDENTIALS",
+            message: "Invalid email or password",
+          })
+        );
       }
 
       // Ensure email is not null for token creation
       if (!user.email) {
-        throw new Error('User email is required for token creation');
+        throw new Error("User email is required for token creation");
       }
 
       // Create TokenUser object for JWT functions
@@ -231,7 +224,7 @@ router.post(
         id: user.id,
         email: user.email,
         name: user.name ?? undefined,
-        emailVerified: user.emailVerified
+        emailVerified: user.emailVerified,
       };
 
       // Generate tokens
@@ -241,225 +234,206 @@ router.post(
       // Store refresh token in Redis
       await redis.setex(
         `refresh_token:${user.id}:${refreshTokenData.token}`,
-        30 * 24 * 60 * 60, // 30 days
+        604800, // 7 days
         JSON.stringify({
           userData: tokenUser,
-          deviceInfo: req.get('User-Agent'),
+          deviceInfo: req.get("User-Agent"),
           issuedAt: refreshTokenData.issuedAt,
-          expiresAt: refreshTokenData.expiresAt
+          expiresAt: refreshTokenData.expiresAt,
         })
       );
 
       // Update last login
       await prisma.user.update({
         where: { id: user.id },
-        data: { lastLoginAt: new Date() }
+        data: { lastLoginAt: new Date() },
       });
 
-      logger.info('User logged in successfully', {
+      logger.info("User logged in successfully", {
         userId: user.id,
         email: user.email,
         ip: req.ip,
-        userAgent: req.get('User-Agent')
+        userAgent: req.get("User-Agent"),
       });
 
-      return res.json(apiResponse(
-        true,
-        {
+      return res.json(
+        apiResponse(true, {
           user: {
             id: user.id,
             email: user.email,
             name: user.name,
-            lastLoginAt: new Date()
+            lastLoginAt: new Date(),
           },
           tokens: {
             accessToken,
             refreshToken: refreshTokenData.token,
-            expiresIn: config.security.jwt.expiresIn
-          }
-        }
-      ));
-
+            expiresIn: 900, // 15 minutes in seconds
+            tokenType: "Bearer",
+          },
+        })
+      );
     } catch (error) {
-      logger.error('Login failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+      logger.error("Login failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
         email: req.body?.email,
-        ip: req.ip
+        ip: req.ip,
       });
-      
-      return res.status(500).json(apiResponse(
-        false,
-        null,
-        {
-          code: 'LOGIN_FAILED',
-          message: 'Login failed. Please try again.'
-        }
-      ));
+
+      return res.status(500).json(
+        apiResponse(false, null, {
+          code: "LOGIN_FAILED",
+          message: "Login failed. Please try again.",
+        })
+      );
     }
   }
 );
 
 // Refresh token endpoint
 router.post(
-  '/refresh',
+  "/refresh",
   authRateLimit,
   validateRequest(refreshTokenRequestSchema),
   async (req: Request<{}, any, RefreshTokenRequest>, res: Response) => {
     try {
       const { refreshToken } = req.body;
-      
+
       const tokens = await refreshTokens(refreshToken);
 
-      logger.info('Tokens refreshed successfully', {
-        ip: req.ip
+      logger.info("Tokens refreshed successfully", {
+        ip: req.ip,
       });
 
-      return res.json(apiResponse(
-        true, 
-        {
+      return res.json(
+        apiResponse(true, {
           tokens: {
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            expiresIn: config.security.jwt.expiresIn
-          }
-        }
-      ));
-
+            expiresIn: 900, // 15 minutes in seconds
+            tokenType: "Bearer",
+          },
+        })
+      );
     } catch (error) {
-      logger.error('Token refresh failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        ip: req.ip
+      logger.error("Token refresh failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        ip: req.ip,
       });
-      
-      return res.status(401).json(apiResponse(
-        false,
-        null,
-        {
-          code: 'INVALID_REFRESH_TOKEN',
-          message: error instanceof Error ? error.message : 'Token refresh failed'
-        }
-      ));
+
+      return res.status(401).json(
+        apiResponse(false, null, {
+          code: "INVALID_REFRESH_TOKEN",
+          message:
+            error instanceof Error ? error.message : "Token refresh failed",
+        })
+      );
     }
   }
 );
 
 // Logout endpoint
 router.post(
-  '/logout',
+  "/logout",
   authRateLimit,
   validateRequest(logoutRequestSchema),
   async (req: Request<{}, any, LogoutRequest>, res: Response) => {
     try {
       const { refreshToken } = req.body;
-      
+
       const success = await revokeRefreshToken(refreshToken);
-      
+
       if (!success) {
-        return res.status(400).json(apiResponse(
-          false,
-          null,
-          {
-            code: 'INVALID_REFRESH_TOKEN',
-            message: 'Invalid refresh token'
-          }
-        ));
+        return res.status(400).json(
+          apiResponse(false, null, {
+            code: "INVALID_REFRESH_TOKEN",
+            message: "Invalid refresh token",
+          })
+        );
       }
 
-      logger.info('User logged out successfully', {
-        ip: req.ip
+      logger.info("User logged out successfully", {
+        ip: req.ip,
       });
 
-      return res.json(apiResponse(
-        true,
-        {
-          message: 'Logged out successfully'
-        }
-      ));
-
+      return res.json(
+        apiResponse(true, {
+          message: "Logged out successfully",
+        })
+      );
     } catch (error) {
-      logger.error('Logout failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        ip: req.ip
+      logger.error("Logout failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        ip: req.ip,
       });
-      
-      return res.status(500).json(apiResponse(
-        false,
-        null,
-        {
-          code: 'LOGOUT_FAILED',
-          message: 'Logout failed. Please try again.'
-        }
-      ));
+
+      return res.status(500).json(
+        apiResponse(false, null, {
+          code: "LOGOUT_FAILED",
+          message: "Logout failed. Please try again.",
+        })
+      );
     }
   }
 );
 
 // Logout from all devices endpoint
 router.post(
-  '/logout-all',
+  "/logout-all",
   authRateLimit,
   validateRequest(logoutAllRequestSchema),
   async (req: Request<{}, any, LogoutAllRequest>, res: Response) => {
     try {
       const { refreshToken } = req.body;
-      
+
       // First, we need to find the user ID from the refresh token
       const keys = await redis.keys(`refresh_token:*:${refreshToken}`);
       if (keys.length === 0) {
-        return res.status(400).json(apiResponse(
-          false,
-          null,
-          {
-            code: 'INVALID_REFRESH_TOKEN',
-            message: 'Invalid refresh token'
-          }
-        ));
+        return res.status(400).json(
+          apiResponse(false, null, {
+            code: "INVALID_REFRESH_TOKEN",
+            message: "Invalid refresh token",
+          })
+        );
       }
-      
+
       // Extract user ID from the key pattern: refresh_token:userId:token
       const userIdMatch = keys[0].match(/^refresh_token:([^:]+):/);
       if (!userIdMatch) {
-        return res.status(400).json(apiResponse(
-          false,
-          null,
-          {
-            code: 'INVALID_REFRESH_TOKEN',
-            message: 'Invalid refresh token format'
-          }
-        ));
+        return res.status(400).json(
+          apiResponse(false, null, {
+            code: "INVALID_REFRESH_TOKEN",
+            message: "Invalid refresh token format",
+          })
+        );
       }
-      
+
       const userId = userIdMatch[1];
       const tokensRevoked = await revokeAllUserTokens(userId);
 
-      logger.info('User logged out from all devices', {
+      logger.info("User logged out from all devices", {
         userId,
         tokensRevoked,
-        ip: req.ip
+        ip: req.ip,
       });
 
-      return res.json(apiResponse(
-        true,
-        {
-          message: 'Logged out from all devices successfully',
-          tokensRevoked
-        }
-      ));
-
+      return res.json(
+        apiResponse(true, {
+          message: "Logged out from all devices successfully",
+          tokensRevoked,
+        })
+      );
     } catch (error) {
-      logger.error('Logout all failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        ip: req.ip
+      logger.error("Logout all failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        ip: req.ip,
       });
-      
-      return res.status(500).json(apiResponse(
-        false,
-        null,
-        {
-          code: 'LOGOUT_ALL_FAILED',
-          message: 'Logout from all devices failed. Please try again.'
-        }
-      ));
+
+      return res.status(500).json(
+        apiResponse(false, null, {
+          code: "LOGOUT_ALL_FAILED",
+          message: "Logout from all devices failed. Please try again.",
+        })
+      );
     }
   }
 );

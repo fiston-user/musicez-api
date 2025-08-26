@@ -180,11 +180,16 @@ export const validateRequest = (schema: z.ZodSchema) => {
       const result = schema.safeParse(req.body);
       
       if (!result.success) {
+        const firstError = result.error.issues[0];
+        const errorMessage = firstError.path.length > 0 
+          ? `${firstError.path.join('.')} ${firstError.message.toLowerCase()}`
+          : firstError.message;
+        
         return res.status(400).json({
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'Request validation failed',
+            message: errorMessage,
             details: result.error.issues.map(issue => ({
               field: issue.path.join('.'),
               message: issue.message,
