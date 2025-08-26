@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Health check table for database connectivity verification
+model SystemHealth {
+  id        String   @id @default(uuid())
+  status    String   @default("healthy")
+  checkedAt DateTime @default(now())
+  version   String   @default("1.0.0")
+  
+  @@map("system_health")
+}
+
+// API Keys for future authentication
+model ApiKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastUsed  DateTime?
+  
+  @@index([key])
+  @@map("api_keys")
+}
+
+// Request logs for monitoring
+model RequestLog {
+  id         String   @id @default(uuid())
+  method     String
+  path       String
+  statusCode Int
+  duration   Int      // in milliseconds
+  ip         String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  
+  @@index([createdAt])
+  @@index([path])
+  @@map("request_logs")
+}
