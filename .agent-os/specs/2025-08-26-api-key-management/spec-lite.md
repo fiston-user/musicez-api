@@ -1,0 +1,3 @@
+# Spec Summary (Lite)
+
+Implement secure CRUD endpoints for managing service API keys used to authenticate with external services like Spotify Web API and OpenAI. This feature enables administrators to securely store, manage, and monitor external service credentials through REST endpoints, establishing the foundation for third-party integrations with proper authentication protection and usage tracking.

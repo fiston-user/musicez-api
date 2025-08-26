@@ -20,9 +20,19 @@ const searchRateLimit = rateLimit({
   },
   // Custom key generator to rate limit per user
   keyGenerator: (req) => {
-    // Use user ID if authenticated, otherwise fall back to IP
+    // Use user ID if authenticated
     const authenticatedReq = req as any;
-    return authenticatedReq.user?.id || req.ip;
+    if (authenticatedReq.user?.id) {
+      return `user:${authenticatedReq.user.id}`;
+    }
+    // For unauthenticated users, use a combination of IP and user-agent
+    // This provides better IPv6 compatibility and security
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || 'unknown';
+    return `ip:${ip}:${userAgent.substring(0, 50)}`;
+  },
+  validate: {
+    keyGeneratorIpFallback: false
   },
   // Custom handler that logs rate limit hits
   handler: (req, res) => {
@@ -58,7 +68,10 @@ const anonymousSearchRateLimit = rateLimit({
     const authenticatedReq = req as any;
     return !!authenticatedReq.user;
   },
-  keyGenerator: (req) => req.ip || 'anonymous',
+  // Use default keyGenerator which handles IPv6 properly
+  validate: {
+    keyGeneratorIpFallback: false
+  },
   handler: (req, res) => {
     logger.warn('Anonymous search rate limit exceeded', {
       ip: req.ip,

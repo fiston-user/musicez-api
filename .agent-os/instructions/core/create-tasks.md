@@ -67,9 +67,189 @@ Use the file-creator subagent to create file: tasks.md inside of the current fea
 
 </step>
 
-<step number="2" name="execution_readiness">
+<step number="2" subagent="file-creator" name="create_postman_collection">
 
-### Step 2: Execution Readiness Check
+### Step 2: Create Postman Collection
+
+Use the file-creator subagent to create a Postman collection JSON file for testing the API endpoints defined in the spec.
+
+<collection_template>
+{
+  "info": {
+    "name": "[SPEC_NAME] API Collection",
+    "description": "Postman collection for testing [SPEC_NAME] endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('authToken', response.data.tokens.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+</collection_template>
+
+<endpoint_templates>
+  <search_endpoint>
+    {
+      "name": "Search Songs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/songs/search?q=queen&limit=10&threshold=0.3",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "songs", "search"],
+          "query": [
+            {
+              "key": "q",
+              "value": "queen"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "threshold",
+              "value": "0.3"
+            }
+          ]
+        }
+      }
+    }
+  </search_endpoint>
+  
+  <crud_endpoints>
+    {
+      "name": "Get Item",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/[RESOURCE]/{{itemId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "[RESOURCE]", "{{itemId}}"]
+        }
+      }
+    },
+    {
+      "name": "Create Item",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"[FIELD]\": \"[VALUE]\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/[RESOURCE]",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "[RESOURCE]"]
+        }
+      }
+    }
+  </crud_endpoints>
+</endpoint_templates>
+
+<instructions>
+  ACTION: Create Postman collection JSON file
+  LOCATION: spec folder as "postman-collection.json"
+  CONTENT: Include authentication endpoints and spec-specific endpoints
+  VARIABLES: Set up baseUrl and authToken variables
+  TESTS: Add test scripts to capture auth tokens automatically
+  CUSTOMIZE: Replace [SPEC_NAME] with actual spec name
+  ADD_ENDPOINTS: Include relevant endpoints from the spec requirements
+</instructions>
+
+</step>
+
+<step number="3" name="execution_readiness">
+
+### Step 3: Execution Readiness Check
 
 Evaluate readiness to begin implementation by presenting the first task summary and requesting user confirmation to proceed.
 

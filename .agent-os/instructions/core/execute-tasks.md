@@ -44,31 +44,59 @@ Identify which tasks to execute from the spec (using spec_srd_reference file pat
 
 </step>
 
-<step number="2" subagent="context-fetcher" name="context_analysis">
+<step number="2" subagent="enhanced-context-fetcher" name="enhanced_context_analysis">
 
-### Step 2: Context Analysis
+### Step 2: Enhanced Context Analysis
 
-Use the context-fetcher subagent to gather minimal context for task understanding by always loading spec tasks.md, and conditionally loading @.agent-os/product/mission-lite.md, spec-lite.md, and sub-specs/technical-spec.md if not already in context.
+Use the enhanced-context-fetcher subagent to perform comprehensive architectural pattern analysis and gather context for task understanding. This includes architectural patterns, code conventions, database patterns, and anti-pattern awareness.
 
 <instructions>
-  ACTION: Use context-fetcher subagent to:
-    - REQUEST: "Get product pitch from mission-lite.md"
-    - REQUEST: "Get spec summary from spec-lite.md"
-    - REQUEST: "Get technical approach from technical-spec.md"
-  PROCESS: Returned information
+  ACTION: Use enhanced-context-fetcher subagent (Claude Code subagent in .claude/agents/)
+  REQUEST: Perform comprehensive context analysis for task execution including:
+    - Analyze architectural patterns (database clients, utilities, imports)
+    - Load essential documentation (tasks.md, mission-lite.md, spec-lite.md, technical-spec.md)
+    - Review established code patterns from code-patterns.md
+    - Check anti-patterns to avoid from anti-patterns.md
+    - Generate architectural context summary for task execution
+  WAIT: For enhanced context analysis completion
+  PROCESS: Use architectural guidance for all subsequent task implementation
 </instructions>
 
-
-<context_gathering>
+<enhanced_context_gathering>
+  <architectural_analysis>
+    - Database client patterns (singleton usage, import patterns)
+    - Utility structure mapping (security, formatters, helpers)
+    - Import convention analysis (relative vs absolute, organization)
+    - File organization patterns (controllers, routes, tests)
+  </architectural_analysis>
   <essential_docs>
     - tasks.md for task breakdown
+    - code-patterns.md for established patterns
+    - anti-patterns.md for patterns to avoid
   </essential_docs>
   <conditional_docs>
     - mission-lite.md for product alignment
     - spec-lite.md for feature summary
     - technical-spec.md for implementation details
+    - tech-stack.md for technology standards
   </conditional_docs>
-</context_gathering>
+  <pattern_validation>
+    - Verify proposed implementations against established patterns
+    - Ensure import conventions are followed
+    - Check database access patterns match project standards
+    - Validate against documented anti-patterns
+  </pattern_validation>
+</enhanced_context_gathering>
+
+<architectural_guidance>
+  The enhanced context-fetcher will provide specific guidance including:
+  - Correct database client import patterns
+  - Established utility locations and usage
+  - Proper import organization and conventions
+  - Testing patterns and mock setups
+  - Error handling and logging standards
+  - Response formatting approaches
+</architectural_guidance>
 
 </step>
 

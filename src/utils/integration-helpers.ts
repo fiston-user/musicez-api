@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { Application } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { createApp } from '../app';
+import createApp from '../app';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface TestContext {
