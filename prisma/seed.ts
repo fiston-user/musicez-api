@@ -63,7 +63,7 @@ async function main() {
   ]);
   console.log(`✅ Created ${users.length} users`);
 
-  // Create sample songs
+  // Create sample songs (enhanced for search testing)
   const songs = await Promise.all([
     prisma.song.create({
       data: {
@@ -79,8 +79,10 @@ async function main() {
         valence: 0.228,
         acousticness: 0.271,
         instrumentalness: 0,
-        popularity: 89,
+        popularity: 95,
         duration: 354320,
+        spotifyId: 'spotify:track:6l8GvAyoUZwWDghiUvd3zba',
+        previewUrl: 'https://p.scdn.co/mp3-preview/bohemian-rhapsody',
       },
     }),
     prisma.song.create({
@@ -97,8 +99,10 @@ async function main() {
         valence: 0.329,
         acousticness: 0.56,
         instrumentalness: 0.00108,
-        popularity: 85,
+        popularity: 92,
         duration: 482830,
+        spotifyId: 'spotify:track:5CQ30WqJwcep0pYcV4AMNc',
+        previewUrl: 'https://p.scdn.co/mp3-preview/stairway-to-heaven',
       },
     }),
     prisma.song.create({
@@ -171,6 +175,55 @@ async function main() {
         instrumentalness: 0.000108,
         popularity: 83,
         duration: 301920,
+      },
+    }),
+    // Additional songs for fuzzy search testing
+    prisma.song.create({
+      data: {
+        title: 'Bohemian Rhapsody (Live)',
+        artist: 'Queen',
+        album: 'Live at Wembley',
+        genre: 'rock',
+        releaseYear: 1986,
+        popularity: 75,
+        duration: 362000,
+        spotifyId: 'spotify:track:1AhDOtG9vPSOmSzV73D2HY',
+      },
+    }),
+    prisma.song.create({
+      data: {
+        title: 'Hotel California',
+        artist: 'Eagles',
+        album: 'Hotel California',
+        genre: 'rock',
+        releaseYear: 1976,
+        popularity: 90,
+        duration: 391000,
+        spotifyId: 'spotify:track:40riOy7x9W7GXjyGp4pjAv',
+      },
+    }),
+    prisma.song.create({
+      data: {
+        title: 'Imagine',
+        artist: 'John Lennon',
+        album: 'Imagine',
+        genre: 'rock',
+        releaseYear: 1971,
+        popularity: 88,
+        duration: 183000,
+        spotifyId: 'spotify:track:7pKfPomDEeI4TPT6EOYjn9',
+      },
+    }),
+    prisma.song.create({
+      data: {
+        title: 'Wonderwall',
+        artist: 'Oasis',
+        album: '(What\'s the Story) Morning Glory?',
+        genre: 'alternative',
+        releaseYear: 1995,
+        popularity: 85,
+        duration: 258000,
+        spotifyId: 'spotify:track:3MODES4TNtygekLl146Dxd',
       },
     }),
   ]);

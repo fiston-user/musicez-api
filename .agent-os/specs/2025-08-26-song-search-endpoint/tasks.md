@@ -7,23 +7,23 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
 
 ## Tasks
 
-- [ ] 1. **Database Setup and Song Model Enhancement**
-  - [ ] 1.1 Write tests for Song model with search-related fields
-  - [ ] 1.2 Enable pg_trgm extension in PostgreSQL database
-  - [ ] 1.3 Update Song model in Prisma schema with searchVector field
-  - [ ] 1.4 Create and run Prisma migration for Song model changes
-  - [ ] 1.5 Create GIN indexes for trigram-based fuzzy search
-  - [ ] 1.6 Seed database with sample song data for testing
-  - [ ] 1.7 Verify database setup and all migration tests pass
+- [x] 1. **Database Setup and Song Model Enhancement**
+  - [x] 1.1 Write tests for Song model with search-related fields
+  - [x] 1.2 Enable pg_trgm extension in PostgreSQL database
+  - [x] 1.3 Update Song model in Prisma schema with searchVector field
+  - [x] 1.4 Create and run Prisma migration for Song model changes
+  - [x] 1.5 Create GIN indexes for trigram-based fuzzy search
+  - [x] 1.6 Seed database with sample song data for testing
+  - [x] 1.7 Verify database setup and all migration tests pass
 
-- [ ] 2. **Search Service Implementation**
-  - [ ] 2.1 Write unit tests for fuzzy search service logic
-  - [ ] 2.2 Create search service with fuzzy matching algorithm
-  - [ ] 2.3 Implement similarity scoring and result ranking
-  - [ ] 2.4 Add query sanitization and normalization
-  - [ ] 2.5 Implement result limiting and pagination logic
-  - [ ] 2.6 Create search query builder with Prisma raw queries
-  - [ ] 2.7 Verify all search service tests pass
+- [x] 2. **Search Service Implementation**
+  - [x] 2.1 Write unit tests for fuzzy search service logic
+  - [x] 2.2 Create search service with fuzzy matching algorithm
+  - [x] 2.3 Implement similarity scoring and result ranking
+  - [x] 2.4 Add query sanitization and normalization
+  - [x] 2.5 Implement result limiting and pagination logic
+  - [x] 2.6 Create search query builder with Prisma raw queries
+  - [x] 2.7 Verify all search service tests pass
 
 - [ ] 3. **API Endpoint and Controller**
   - [ ] 3.1 Write integration tests for GET /api/v1/songs/search endpoint
