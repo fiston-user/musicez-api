@@ -37,6 +37,12 @@ const envSchema = z.object({
   
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:3001'),
+  
+  // Spotify API
+  SPOTIFY_CLIENT_ID: z.string().optional(),
+  SPOTIFY_CLIENT_SECRET: z.string().optional(),
+  SPOTIFY_REDIRECT_URI: z.string().optional(),
+  SPOTIFY_ENCRYPTION_KEY: z.string().optional(),
 });
 
 // Parse and validate environment variables
@@ -94,6 +100,13 @@ export const config = {
   
   cors: {
     origin: env.CORS_ORIGIN.split(',').map(origin => origin.trim()),
+  },
+  
+  spotify: {
+    clientId: env.SPOTIFY_CLIENT_ID,
+    clientSecret: env.SPOTIFY_CLIENT_SECRET,
+    redirectUri: env.SPOTIFY_REDIRECT_URI || `http://localhost:${env.PORT}/api/${env.API_VERSION}/auth/spotify/callback`,
+    encryptionKey: env.SPOTIFY_ENCRYPTION_KEY || 'default-dev-encryption-key-32b',
   },
 };
 

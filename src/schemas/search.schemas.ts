@@ -39,6 +39,38 @@ export const searchThresholdSchema = z
   });
 
 /**
+ * Enhanced search enable Spotify validation schema
+ */
+export const searchEnableSpotifySchema = z
+  .union([z.string(), z.boolean()])
+  .optional()
+  .transform((val) => {
+    if (val === undefined) return false;
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const lower = val.toLowerCase();
+      return lower === 'true' || lower === '1' || lower === 'yes';
+    }
+    return false;
+  });
+
+/**
+ * Fresh search validation schema (bypass cache)
+ */
+export const searchFreshSchema = z
+  .union([z.string(), z.boolean()])
+  .optional()
+  .transform((val) => {
+    if (val === undefined) return false;
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const lower = val.toLowerCase();
+      return lower === 'true' || lower === '1' || lower === 'yes';
+    }
+    return false;
+  });
+
+/**
  * Complete search request query parameters schema
  */
 export const searchRequestSchema = z.object({
@@ -48,12 +80,28 @@ export const searchRequestSchema = z.object({
 });
 
 /**
+ * Enhanced search request query parameters schema
+ */
+export const enhancedSearchRequestSchema = z.object({
+  q: searchQuerySchema,
+  limit: searchLimitSchema,
+  threshold: searchThresholdSchema,
+  enrich: searchEnableSpotifySchema,
+  fresh: searchFreshSchema
+});
+
+/**
  * TypeScript types for search requests
  */
 export type SearchQueryParams = z.infer<typeof searchRequestSchema>;
+export type EnhancedSearchQueryParams = z.infer<typeof enhancedSearchRequestSchema>;
 
 export interface SearchRequest extends Request {
   query: SearchQueryParams & { [key: string]: any };
+}
+
+export interface EnhancedSearchRequest extends Request {
+  query: EnhancedSearchQueryParams & { [key: string]: any };
 }
 
 /**
@@ -130,6 +178,19 @@ export const validateSearchQuery = (
 };
 
 /**
+ * Audio features schema for enhanced search results
+ */
+export const audioFeaturesSchema = z.object({
+  acousticness: z.number().optional(),
+  danceability: z.number().optional(),
+  energy: z.number().optional(),
+  valence: z.number().optional(),
+  speechiness: z.number().optional(),
+  liveness: z.number().optional(),
+  loudness: z.number().optional(),
+}).optional();
+
+/**
  * Search result item schema for response validation
  */
 export const searchResultItemSchema = z.object({
@@ -145,6 +206,16 @@ export const searchResultItemSchema = z.object({
 });
 
 /**
+ * Enhanced search result item schema with Spotify enrichment
+ */
+export const enhancedSearchResultItemSchema = searchResultItemSchema.extend({
+  spotifyId: z.string().optional(),
+  externalUrl: z.string().optional(),
+  audioFeatures: audioFeaturesSchema,
+  source: z.enum(['local', 'spotify', 'merged']).optional()
+});
+
+/**
  * Search response metadata schema
  */
 export const searchMetadataSchema = z.object({
@@ -157,6 +228,15 @@ export const searchMetadataSchema = z.object({
 });
 
 /**
+ * Enhanced search response metadata schema
+ */
+export const enhancedSearchMetadataSchema = searchMetadataSchema.extend({
+  spotifyEnabled: z.boolean(),
+  localResults: z.number().min(0),
+  spotifyResults: z.number().min(0),
+});
+
+/**
  * Complete search response schema
  */
 export const searchResponseSchema = z.object({
@@ -164,6 +244,18 @@ export const searchResponseSchema = z.object({
   data: z.object({
     results: z.array(searchResultItemSchema),
     metadata: searchMetadataSchema
+  }),
+  timestamp: z.string()
+});
+
+/**
+ * Enhanced search response schema
+ */
+export const enhancedSearchResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    results: z.array(enhancedSearchResultItemSchema),
+    metadata: enhancedSearchMetadataSchema
   }),
   timestamp: z.string()
 });
@@ -190,6 +282,9 @@ export const errorResponseSchema = z.object({
  * TypeScript types for responses
  */
 export type SearchResultItem = z.infer<typeof searchResultItemSchema>;
+export type EnhancedSearchResultItem = z.infer<typeof enhancedSearchResultItemSchema>;
 export type SearchMetadata = z.infer<typeof searchMetadataSchema>;
+export type EnhancedSearchMetadata = z.infer<typeof enhancedSearchMetadataSchema>;
 export type SearchResponse = z.infer<typeof searchResponseSchema>;
+export type EnhancedSearchResponse = z.infer<typeof enhancedSearchResponseSchema>;
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;

@@ -252,12 +252,24 @@
         {
           "name": "Disconnect Spotify Account",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/spotify/disconnect",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "auth", "spotify", "disconnect"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Spotify Tokens",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/spotify/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "spotify", "refresh"]
             }
           }
         }
@@ -340,7 +352,15 @@
             "url": {
               "raw": "{{baseUrl}}/api/v1/admin/spotify/sync/status/{{syncJobId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "admin", "spotify", "sync", "status", "{{syncJobId}}"]
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "spotify",
+                "sync",
+                "status",
+                "{{syncJobId}}"
+              ]
             }
           }
         }
