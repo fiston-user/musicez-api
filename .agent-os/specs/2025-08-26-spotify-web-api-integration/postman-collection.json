@@ -1,0 +1,350 @@
+{
+  "info": {
+    "name": "Spotify Web API Integration Collection",
+    "description": "Postman collection for testing Spotify Web API integration endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "spotifyAuthUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "spotifyCallbackCode",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('authToken', response.data.tokens.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Enhanced Song Search",
+      "item": [
+        {
+          "name": "Search Songs (Basic)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search?query=bohemian rhapsody&limit=10&threshold=0.3",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "bohemian rhapsody"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "threshold",
+                  "value": "0.3"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Songs (Spotify Enriched)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search?query=imagine dragons&limit=5&enrich=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "imagine dragons"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "enrich",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Songs (Fresh Spotify Data)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search?query=taylor swift&limit=5&enrich=true&fresh=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "taylor swift"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "enrich",
+                  "value": "true"
+                },
+                {
+                  "key": "fresh",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Spotify Authentication",
+      "item": [
+        {
+          "name": "Connect Spotify Account",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/spotify/connect",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "spotify", "connect"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('spotifyAuthUrl', response.data.authUrl);",
+                  "    console.log('Visit this URL to authorize Spotify: ' + response.data.authUrl);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Spotify OAuth Callback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/spotify/callback?code={{spotifyCallbackCode}}&state=secure_state_token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "spotify", "callback"],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "{{spotifyCallbackCode}}"
+                },
+                {
+                  "key": "state",
+                  "value": "secure_state_token"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Spotify Connection Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/spotify/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "spotify", "status"]
+            }
+          }
+        },
+        {
+          "name": "Disconnect Spotify Account",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/spotify/disconnect",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "spotify", "disconnect"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Spotify Data",
+      "item": [
+        {
+          "name": "Get User Playlists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spotify/user/playlists?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spotify", "user", "playlists"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Recent Tracks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spotify/user/recent-tracks?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spotify", "user", "recent-tracks"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Sync Management",
+      "item": [
+        {
+          "name": "Trigger Popular Tracks Sync",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"limit\": 50,\n  \"force\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/spotify/sync/popular",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "spotify", "sync", "popular"]
+            }
+          }
+        },
+        {
+          "name": "Check Sync Job Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/spotify/sync/status/{{syncJobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "spotify", "sync", "status", "{{syncJobId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
