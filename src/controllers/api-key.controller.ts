@@ -132,7 +132,7 @@ export class ApiKeyController {
     const requestId = res.locals.requestId;
 
     try {
-      const { active, limit, offset }: ApiKeyQuery = req.query as any;
+      const { active, limit, offset }: ApiKeyQuery = (req as any).validatedQuery || {};
 
       logger.info('API keys list requested', {
         active,

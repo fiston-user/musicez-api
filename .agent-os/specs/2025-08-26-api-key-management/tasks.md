@@ -27,23 +27,23 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [x] 2.7 Implement deleteApiKey method with audit logging
   - [x] 2.8 Verify all controller unit tests pass
 
-- [ ] 3. **API Routes and Middleware Integration**
+- [x] 3. **API Routes and Middleware Integration**
 
-  - [ ] 3.1 Write integration tests for API key endpoints
-  - [ ] 3.2 Create API key routes with proper HTTP methods
-  - [ ] 3.3 Integrate JWT authentication middleware for admin protection
-  - [ ] 3.4 Add rate limiting configuration for API key endpoints
-  - [ ] 3.5 Implement request ID tracking and error handling
-  - [ ] 3.6 Add CORS configuration for admin interface access
-  - [ ] 3.7 Mount routes in main application with proper prefix
-  - [ ] 3.8 Verify all API endpoint integration tests pass
+  - [x] 3.1 Write integration tests for API key endpoints
+  - [x] 3.2 Create API key routes with proper HTTP methods
+  - [x] 3.3 Integrate JWT authentication middleware for admin protection
+  - [x] 3.4 Add rate limiting configuration for API key endpoints
+  - [x] 3.5 Implement request ID tracking and error handling
+  - [x] 3.6 Add CORS configuration for admin interface access
+  - [x] 3.7 Mount routes in main application with proper prefix
+  - [x] 3.8 Verify all API endpoint integration tests pass
 
-- [ ] 4. **Security and Usage Tracking Features**
+- [x] 4. **Security and Usage Tracking Features**
 
-  - [ ] 4.1 Write tests for security and tracking features
-  - [ ] 4.2 Implement automatic lastUsed timestamp updates
-  - [ ] 4.3 Add audit logging for all API key operations
-  - [ ] 4.4 Implement key masking for secure display in responses
-  - [ ] 4.5 Add input sanitization for API key names and values
-  - [ ] 4.6 Create admin-level authorization check middleware
-  - [ ] 4.7 Verify all security and tracking tests pass
+  - [x] 4.1 Write tests for security and tracking features
+  - [x] 4.2 Implement automatic lastUsed timestamp updates
+  - [x] 4.3 Add audit logging for all API key operations
+  - [x] 4.4 Implement key masking for secure display in responses
+  - [x] 4.5 Add input sanitization for API key names and values
+  - [x] 4.6 Create admin-level authorization check middleware
+  - [x] 4.7 Verify all security and tracking tests pass

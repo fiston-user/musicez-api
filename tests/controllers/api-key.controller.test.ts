@@ -223,7 +223,7 @@ describe('ApiKeyController', () => {
   describe('getAllApiKeys', () => {
     beforeEach(() => {
       // Simulate query validation middleware transformation
-      (mockReq as any).query = { active: true, limit: 20, offset: 0 };
+      (mockReq as any).validatedQuery = { active: true, limit: 20, offset: 0 };
     });
 
     it('should get all API keys successfully', async () => {
@@ -251,7 +251,7 @@ describe('ApiKeyController', () => {
     });
 
     it('should filter by active status', async () => {
-      (mockReq as any).query = { active: false };
+      (mockReq as any).validatedQuery = { active: false, limit: 20, offset: 0 };
       mockPrisma.apiKey.findMany.mockResolvedValue([mockInactiveApiKey]);
 
       await controller.getAllApiKeys(mockReq as Request, mockRes as Response, mockNext);
@@ -265,7 +265,7 @@ describe('ApiKeyController', () => {
     });
 
     it('should handle no filters (get all)', async () => {
-      (mockReq as any).query = {};
+      (mockReq as any).validatedQuery = { limit: 20, offset: 0 };
       mockPrisma.apiKey.findMany.mockResolvedValue([mockApiKey, mockInactiveApiKey]);
 
       await controller.getAllApiKeys(mockReq as Request, mockRes as Response, mockNext);

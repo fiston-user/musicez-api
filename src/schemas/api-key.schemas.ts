@@ -127,18 +127,29 @@ export const apiKeyQuerySchema = z.object({
   active: z
     .string()
     .optional()
-    .transform((val) => val === 'true' ? true : val === 'false' ? false : undefined)
-    .pipe(z.boolean().optional()),
+    .transform((val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return undefined;
+    }),
   limit: z
     .string()
     .optional()
-    .transform((val) => val ? parseInt(val, 10) : undefined)
-    .pipe(z.number().min(1).max(100).default(20).optional()),
+    .transform((val) => {
+      if (!val) return 20;
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed < 1 || parsed > 100) return 20;
+      return parsed;
+    }),
   offset: z
     .string()
     .optional()
-    .transform((val) => val ? parseInt(val, 10) : undefined)
-    .pipe(z.number().min(0).default(0).optional()),
+    .transform((val) => {
+      if (!val) return 0;
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed < 0) return 0;
+      return parsed;
+    }),
 });
 
 // Type exports for TypeScript
@@ -224,8 +235,8 @@ export const validateApiKeyQuery = (req: any, res: any, next: any) => {
       });
     }
     
-    // Replace req.query with validated and transformed data
-    req.query = result.data;
+    // Store validated and transformed data in a new property
+    (req as any).validatedQuery = result.data;
     next();
   } catch (error) {
     return res.status(400).json({

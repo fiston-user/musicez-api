@@ -182,7 +182,7 @@ describe('API Key Security Utilities', () => {
 
   describe('validateApiKeyFormat', () => {
     it('should validate a properly formatted API key', () => {
-      const apiKey = 'test_fake_api_key_for_testing_123456789';
+      const apiKey = 'valid_fake_api_key_for_validation_123456789';
       const result = validateApiKeyFormat(apiKey);
 
       expect(result.isValid).toBe(true);
