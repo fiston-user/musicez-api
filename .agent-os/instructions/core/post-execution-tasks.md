@@ -225,9 +225,59 @@ Use the project-manager subagent to create a structured summary message with emo
 
 </step>
 
-<step number="8" subagent="project-manager" name="completion_notification">
+<step number="8" subagent="self-improvement" name="self_improvement_analysis">
 
-### Step 8: Task Completion Notification
+### Step 8: Self-Improvement Analysis
+
+Use the self-improvement subagent to analyze the completed task execution for quality, mistakes, and learning opportunities. This creates a continuous improvement feedback loop.
+
+<instructions>
+  ACTION: Use self-improvement subagent (Claude Code subagent in .claude/agents/)
+  REQUEST: Analyze completed task execution for improvement opportunities including:
+    - Review all code changes for pattern adherence and quality
+    - Identify mistakes made during implementation
+    - Document successful patterns and approaches
+    - Update knowledge base with learnings
+    - Suggest improvements to Agent OS instructions
+    - Generate self-improvement report
+  WAIT: For improvement analysis completion
+  PROCESS: Apply recommended knowledge base updates
+</instructions>
+
+<improvement_analysis>
+  <code_quality_review>
+    - Check adherence to established patterns
+    - Identify deviations from code-patterns.md
+    - Validate against anti-patterns.md
+    - Review test quality and coverage
+  </code_quality_review>
+  <mistake_identification>
+    - Architectural mistakes (wrong imports, patterns)
+    - Implementation issues (errors, inefficiencies)
+    - Testing problems (mocking, coverage)
+    - Process deviations from workflow
+  </mistake_identification>
+  <knowledge_updates>
+    - Update code-patterns.md with new successful patterns
+    - Add anti-patterns.md entries for identified mistakes
+    - Enhance documentation based on learnings
+    - Suggest agent instruction improvements
+  </knowledge_updates>
+</improvement_analysis>
+
+<continuous_learning>
+  This step ensures each task execution teaches the system:
+  - What patterns work well in this project
+  - What mistakes to avoid in future tasks
+  - How to improve agent instructions and processes
+  - What architectural decisions should be documented
+</continuous_learning>
+
+</step>
+
+<step number="9" subagent="project-manager" name="completion_notification">
+
+### Step 9: Task Completion Notification
 
 Use the project-manager subagent to play a system sound to alert the user that tasks are complete.
 
