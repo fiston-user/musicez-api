@@ -366,4 +366,188 @@ if (!result) {
 }
 ```
 
+## Security Utility Patterns
+
+### API Key Security
+**Location**: `src/utils/api-key-security.ts`
+```typescript
+// ✅ CORRECT: Use specialized security utilities
+import { hashApiKey, verifyApiKey } from '../utils/api-key-security';
+
+// Hash for storage
+const hashedKey = await hashApiKey(plainTextKey);
+
+// Verify against hash
+const isValid = await verifyApiKey(providedKey, storedHash);
+
+// Generate secure keys
+const newKey = generateSecureApiKey('spotify'); // sk_sp_...
+```
+
+### Security Best Practices
+```typescript
+// ✅ Always hash sensitive data before storage
+const hashedKey = await hashApiKey(apiKey);
+await prisma.apiKey.create({
+  data: {
+    key: hashedKey, // Store hash, never plaintext
+    name: validatedName
+  }
+});
+
+// ✅ Use custom error classes for security operations
+try {
+  const hash = await hashApiKey(key);
+} catch (error) {
+  if (error instanceof ApiKeySecurityError) {
+    // Handle security-specific errors
+  }
+}
+
+// ✅ Never log sensitive values
+logger.info('API key created', {
+  id: result.id,
+  name: result.name,
+  // key: result.key, // ❌ NEVER log actual keys
+  keyLength: result.key.length // ✅ Safe metadata only
+});
+```
+
+## Response Formatting Patterns
+
+### Standardized API Responses
+**Location**: `src/utils/api-key-formatters.ts`
+```typescript
+// ✅ CORRECT: Use established response formatters
+import {
+  formatApiKeySuccessResponse,
+  formatApiKeyErrorResponse,
+  apiKeyErrorResponses,
+  getHttpStatusForError,
+} from '../utils/api-key-formatters';
+
+// Success responses
+const response = formatApiKeySuccessResponse(apiKey, requestId);
+res.status(201).json(response);
+
+// Error responses with proper HTTP status codes
+const errorResponse = apiKeyErrorResponses.notFound(requestId);
+const statusCode = getHttpStatusForError(errorResponse.error.code);
+res.status(statusCode).json(errorResponse);
+```
+
+### Response Format Consistency
+```typescript
+// ✅ All success responses follow this structure
+{
+  success: true,
+  data: {
+    // Domain object without sensitive data
+    id: "uuid",
+    name: "API Key Name",
+    active: true,
+    createdAt: "2025-08-26T10:00:00Z",
+    updatedAt: "2025-08-26T10:00:00Z",
+    lastUsed: null
+  },
+  timestamp: "2025-08-26T10:00:00Z",
+  requestId: "req-123"
+}
+
+// ✅ All error responses follow this structure
+{
+  success: false,
+  error: {
+    code: "VALIDATION_ERROR",
+    message: "Descriptive error message",
+    field: "fieldName", // Optional
+    details: {...}      // Optional
+  },
+  timestamp: "2025-08-26T10:00:00Z",
+  requestId: "req-123"
+}
+```
+
+## Validation and Schema Patterns
+
+### Zod Schema Architecture
+**Location**: `src/schemas/api-key.schemas.ts`
+```typescript
+// ✅ CORRECT: Build complex schemas from reusable parts
+export const apiKeyNameSchema = z.string()
+  .min(2, 'Name must be at least 2 characters')
+  .max(100, 'Name must not exceed 100 characters')
+  .trim()
+  .regex(/^[a-zA-Z0-9\s\-_.]+$/, 'Invalid characters');
+
+export const apiKeyRequestSchema = z.object({
+  name: apiKeyNameSchema,
+  key: apiKeyValueSchema,
+  active: z.boolean().default(true),
+});
+
+// ✅ Export types for TypeScript integration
+export type ApiKeyRequest = z.infer<typeof apiKeyRequestSchema>;
+```
+
+### Middleware Validation Pattern
+```typescript
+// ✅ CORRECT: Create reusable validation middleware
+export const validateApiKeyRequest = (schema: z.ZodSchema) => {
+  return (req: any, res: any, next: any) => {
+    const result = schema.safeParse(req.body);
+    
+    if (!result.success) {
+      // Standard error format with field mapping
+      const firstError = result.error.issues[0];
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: formatErrorMessage(firstError),
+          field: firstError.path.join('.'),
+          details: result.error.issues
+        },
+        timestamp: new Date().toISOString(),
+        requestId: res.locals.requestId,
+      });
+    }
+    
+    req.body = result.data; // Use validated data
+    next();
+  };
+};
+```
+
+## Audit and Logging Patterns
+
+### Comprehensive Audit Logging
+```typescript
+// ✅ CORRECT: Include audit logs for sensitive operations
+logger.info('API key audit', {
+  action: 'CREATE' | 'UPDATE' | 'DELETE',
+  apiKeyId: result.id,
+  name: result.name,
+  previousValues: existingData, // For updates
+  ip: req.ip,
+  userAgent: req.get('User-Agent'),
+  requestId,
+  timestamp: new Date().toISOString(),
+});
+```
+
+### Performance Logging
+```typescript
+// ✅ CORRECT: Track processing time for performance monitoring
+const startTime = Date.now();
+// ... operation ...
+const processingTime = Date.now() - startTime;
+
+logger.info('Operation completed', {
+  operation: 'createApiKey',
+  processingTime,
+  // other context
+});
+```
+
 These patterns ensure consistency, maintainability, and adherence to the established architecture of the MusicEZ project.

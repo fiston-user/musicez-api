@@ -463,6 +463,161 @@ async function processApiKeys() {
 }
 ```
 
+## Validation Anti-Patterns
+
+### ❌ Inline Validation Logic in Controllers
+
+**Wrong Approach**:
+```typescript
+export class ApiKeyController {
+  async createApiKey(req, res) {
+    // Inline validation in controller
+    if (!req.body.name || req.body.name.length < 2) {
+      return res.status(400).json({ error: 'Invalid name' });
+    }
+    
+    if (!req.body.key || req.body.key.length < 8) {
+      return res.status(400).json({ error: 'Invalid key' });
+    }
+    
+    // Continue with business logic...
+  }
+}
+```
+
+**Why It's Wrong**:
+- Mixes validation with business logic
+- Inconsistent error response formats
+- Hard to reuse validation rules
+- Makes controllers bloated and hard to test
+
+**Correct Approach**:
+```typescript
+// Use middleware for validation
+router.post('/', 
+  validateApiKeyRequest(apiKeyRequestSchema),
+  controller.createApiKey
+);
+
+// Controller focuses on business logic only
+export class ApiKeyController {
+  async createApiKey(req, res) {
+    const { name, key, active }: ApiKeyRequest = req.body; // Already validated
+    // Pure business logic...
+  }
+}
+```
+
+### ❌ Inconsistent Error Response Formats
+
+**Wrong Approach**:
+```typescript
+// Different error formats across endpoints
+return res.status(400).json({ error: 'Bad request' });
+return res.status(404).json({ message: 'Not found', success: false });
+return res.status(500).json({ err: 'Server error', code: 500 });
+```
+
+**Why It's Wrong**:
+- Inconsistent client experience
+- Hard to handle errors programmatically
+- No correlation or debugging information
+
+**Correct Approach**:
+```typescript
+// Use standardized error formatters
+const errorResponse = apiKeyErrorResponses.notFound(requestId);
+const statusCode = getHttpStatusForError(errorResponse.error.code);
+res.status(statusCode).json(errorResponse);
+
+// All errors have consistent structure:
+{
+  success: false,
+  error: {
+    code: "API_KEY_NOT_FOUND",
+    message: "API key with the specified ID was not found",
+    field: "id"
+  },
+  timestamp: "2025-08-26T10:00:00Z",
+  requestId: "req-123"
+}
+```
+
+## Security Anti-Patterns
+
+### ❌ Storing Plaintext Sensitive Data
+
+**Wrong Approach**:
+```typescript
+// Storing API keys in plaintext
+await prisma.apiKey.create({
+  data: {
+    key: req.body.key, // DON'T store plaintext
+    name: req.body.name
+  }
+});
+
+// Logging sensitive values
+logger.info('API key created', {
+  name: result.name,
+  key: result.key // DON'T log actual keys
+});
+```
+
+**Why It's Wrong**:
+- Major security vulnerability
+- Compliance violations
+- Data breach risk
+- Sensitive data in logs
+
+**Correct Approach**:
+```typescript
+// Always hash sensitive data
+const hashedKey = await hashApiKey(req.body.key);
+await prisma.apiKey.create({
+  data: {
+    key: hashedKey, // Store hash only
+    name: req.body.name
+  }
+});
+
+// Log metadata, never sensitive values
+logger.info('API key created', {
+  id: result.id,
+  name: result.name,
+  keyLength: req.body.key.length // Safe metadata
+});
+```
+
+### ❌ Missing Request Context in Logs
+
+**Wrong Approach**:
+```typescript
+logger.error('Operation failed', {
+  error: error.message
+  // Missing context for debugging
+});
+```
+
+**Why It's Wrong**:
+- Hard to debug issues
+- No correlation across requests
+- Missing audit trail information
+
+**Correct Approach**:
+```typescript
+logger.error('API key creation failed', {
+  error: error instanceof Error ? error.message : 'Unknown error',
+  stack: error instanceof Error ? error.stack : undefined,
+  name: req.body?.name,
+  processingTime,
+  ip: req.ip,
+  userAgent: req.get('User-Agent'),
+  requestId,
+  timestamp: new Date().toISOString()
+});
+```
+
 ## Summary
 
 These anti-patterns represent actual mistakes encountered during development and should be actively avoided. Each pattern includes context about why it's problematic and clear alternatives that follow established project conventions.
