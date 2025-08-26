@@ -56,8 +56,7 @@ export const loginRequestSchema = z.object({
 export const refreshTokenRequestSchema = z.object({
   refreshToken: z
     .string()
-    .min(1, 'Refresh token is required')
-    .uuid('Invalid refresh token format'),
+    .min(1, 'Refresh token is required'),
 });
 
 /**
@@ -66,8 +65,7 @@ export const refreshTokenRequestSchema = z.object({
 export const logoutRequestSchema = z.object({
   refreshToken: z
     .string()
-    .min(1, 'Refresh token is required')
-    .uuid('Invalid refresh token format'),
+    .min(1, 'Refresh token is required'),
 });
 
 /**
@@ -76,9 +74,9 @@ export const logoutRequestSchema = z.object({
 export const logoutAllRequestSchema = z.object({
   refreshToken: z
     .string()
-    .min(1, 'Refresh token is required')
-    .uuid('Invalid refresh token format'),
+    .min(1, 'Refresh token is required'),
 });
+
 
 /**
  * User response schema (public user data)
@@ -99,7 +97,7 @@ export const userResponseSchema = z.object({
  */
 export const tokenResponseSchema = z.object({
   accessToken: z.string().min(1),
-  refreshToken: z.string().uuid(),
+  refreshToken: z.string().min(1),
   expiresIn: z.number().positive(),
   tokenType: z.literal('Bearer'),
 });
