@@ -1,10 +1,11 @@
-import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
 import crypto from 'crypto';
 
 import { config } from '../config/environment';
 import logger from '../utils/logger';
 import { redis } from '../config/redis';
+import { prisma } from '../database/prisma';
+import { songSearchService } from '../utils/song-search-service';
 
 export interface RecommendationParams {
   limit?: number;
@@ -48,13 +49,11 @@ export class OpenAIRecommendationError extends Error {
 }
 
 export class OpenAIRecommendationService {
-  private readonly prisma: PrismaClient;
   private readonly openaiClient: OpenAI;
   private readonly cacheKeyPrefix = 'ai_rec';
   private readonly cacheTTL = 3600; // 1 hour
 
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+  constructor() {
     this.openaiClient = new OpenAI({
       apiKey: config.openai.apiKey,
       timeout: 5000, // 5 second timeout
@@ -95,7 +94,7 @@ export class OpenAIRecommendationService {
       }
 
       // Get input song from database
-      const inputSong = await this.prisma.song.findUnique({
+      const inputSong = await prisma.song.findUnique({
         where: { id: songId },
         select: {
           id: true,
@@ -356,70 +355,103 @@ Focus on recommending songs that share similar musical DNA rather than just the 
       return [];
     }
     
-    // Build search conditions for each AI recommendation
-    const searchConditions = aiRecommendations.map(rec => ({
-      AND: [
-        { title: { contains: rec.title, mode: 'insensitive' as const } },
-        { artist: { contains: rec.artist, mode: 'insensitive' as const } },
-      ],
-    }));
+    const results: RecommendationResult[] = [];
+    const unmatchedRecommendations: AIRecommendation[] = [];
     
     try {
-      const matchedSongs = await this.prisma.song.findMany({
-        where: {
-          OR: searchConditions,
-        },
-        select: {
-          id: true,
-          title: true,
-          artist: true,
-          album: true,
-          genre: true,
-          releaseYear: true,
-          tempo: true,
-          key: true,
-          energy: true,
-          danceability: true,
-          valence: true,
-          popularity: true,
-          previewUrl: true,
-        },
-      });
-      
-      // Match songs back to AI recommendations
-      const results: RecommendationResult[] = [];
-      
+      // Use fuzzy search to match each AI recommendation to database songs
       for (const aiRec of aiRecommendations) {
-        const matchedSong = matchedSongs.find(song => 
-          song.title.toLowerCase().includes(aiRec.title.toLowerCase()) &&
-          song.artist.toLowerCase().includes(aiRec.artist.toLowerCase())
-        );
+        // Create a search query combining title and artist
+        const searchQuery = `${aiRec.title} ${aiRec.artist}`;
         
-        if (matchedSong) {
-          results.push({
-            song: matchedSong,
-            score: aiRec.score,
-            reason: aiRec.reason || 'Similar musical characteristics',
+        try {
+          // Search with a lower threshold for better matching and limit to top 3 results
+          const searchResults = await songSearchService.search(searchQuery, {
+            limit: 3,
+            threshold: 0.25, // Lower threshold for more lenient matching
           });
+          
+          if (searchResults.length > 0) {
+            // Take the best match (highest similarity)
+            const bestMatch = searchResults[0];
+            
+            // Get full song details from database
+            const fullSong = await prisma.song.findUnique({
+              where: { id: bestMatch.id },
+              select: {
+                id: true,
+                title: true,
+                artist: true,
+                album: true,
+                genre: true,
+                releaseYear: true,
+                tempo: true,
+                key: true,
+                energy: true,
+                danceability: true,
+                valence: true,
+                popularity: true,
+                previewUrl: true,
+              },
+            });
+            
+            if (fullSong) {
+              // Combine AI score with search similarity for final score
+              const combinedScore = (aiRec.score * 0.7) + (bestMatch.similarity * 0.3);
+              
+              results.push({
+                song: fullSong,
+                score: Math.round(combinedScore * 100) / 100, // Round to 2 decimal places
+                reason: aiRec.reason || 'Similar musical characteristics',
+              });
+              
+              logger.debug('Successfully matched AI recommendation using fuzzy search', {
+                aiRecommendation: `${aiRec.title} - ${aiRec.artist}`,
+                matchedSong: `${fullSong.title} - ${fullSong.artist}`,
+                similarity: bestMatch.similarity,
+                finalScore: combinedScore,
+              });
+            } else {
+              unmatchedRecommendations.push(aiRec);
+            }
+          } else {
+            unmatchedRecommendations.push(aiRec);
+            logger.debug('No fuzzy search matches found for AI recommendation', {
+              searchQuery,
+              aiRecommendation: aiRec,
+            });
+          }
+        } catch (searchError) {
+          logger.warn('Fuzzy search failed for AI recommendation', {
+            searchQuery,
+            aiRecommendation: aiRec,
+            error: searchError instanceof Error ? searchError.message : 'Unknown search error',
+          });
+          unmatchedRecommendations.push(aiRec);
         }
       }
       
+      // Log matching results
       if (results.length === 0) {
-        logger.warn('No matching songs found for AI recommendations', {
-          unmatchedRecommendations: aiRecommendations,
+        logger.warn('No matching songs found for AI recommendations using fuzzy search', {
+          totalAIRecommendations: aiRecommendations.length,
+          unmatchedCount: unmatchedRecommendations.length,
         });
       } else {
-        logger.info('Successfully matched AI recommendations to database songs', {
+        logger.info('Successfully matched AI recommendations using fuzzy search', {
           totalAIRecommendations: aiRecommendations.length,
           matchedSongs: results.length,
+          unmatchedSongs: unmatchedRecommendations.length,
+          matchRate: Math.round((results.length / aiRecommendations.length) * 100),
         });
       }
       
       return results;
     } catch (error) {
-      logger.error('Error matching AI recommendations to database songs', {
+      logger.error('Error matching AI recommendations to database songs with fuzzy search', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        aiRecommendations: aiRecommendations.length,
+        totalAIRecommendations: aiRecommendations.length,
+        partialResults: results.length,
       });
       throw error;
     }
@@ -442,7 +474,7 @@ Focus on recommending songs that share similar musical DNA rather than just the 
       }));
 
       if (recommendationsData.length > 0) {
-        await this.prisma.aIRecommendation.createMany({
+        await prisma.aIRecommendation.createMany({
           data: recommendationsData,
           skipDuplicates: true,
         });
@@ -458,6 +490,58 @@ Focus on recommending songs that share similar musical DNA rather than just the 
         inputSongId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
+    }
+  }
+
+  public async storeBatchRecommendations(
+    batchResults: Array<{
+      inputSongId: string;
+      success: boolean;
+      recommendations?: RecommendationResult[];
+    }>,
+    params: RecommendationParams
+  ): Promise<void> {
+    try {
+      // Collect all successful recommendations for batch insert
+      const allRecommendationsData = batchResults
+        .filter(result => result.success && result.recommendations)
+        .flatMap(result => 
+          result.recommendations!.map(rec => ({
+            inputSongId: result.inputSongId,
+            recommendedSongId: rec.song.id,
+            score: rec.score,
+            reason: rec.reason,
+            modelVersion: config.openai.model,
+            cachedUntil: new Date(Date.now() + this.cacheTTL * 1000),
+            requestParameters: params as any,
+          }))
+        );
+
+      if (allRecommendationsData.length > 0) {
+        // Use transaction for batch operations with optimized timeout
+        await prisma.$transaction(async (tx) => {
+          await tx.aIRecommendation.createMany({
+            data: allRecommendationsData,
+            skipDuplicates: true,
+          });
+        }, {
+          timeout: 30000, // Extended timeout for batch operations
+          maxWait: 5000,  // Max time to wait for connection
+        });
+
+        logger.info('Successfully stored batch AI recommendations', {
+          totalRecommendations: allRecommendationsData.length,
+          uniqueInputSongs: new Set(batchResults.map(r => r.inputSongId)).size,
+          parameters: params,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to store batch AI recommendations', {
+        error: error instanceof Error ? error.message : 'Unknown batch storage error',
+        batchSize: batchResults.length,
+        parameters: params,
+      });
+      // Don't throw here to avoid breaking the main flow
     }
   }
 

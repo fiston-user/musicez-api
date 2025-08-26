@@ -34,9 +34,7 @@ jest.mock('../../src/database/prisma', () => ({
   prisma: mockPrisma,
 }));
 
-jest.mock('../../src/utils/logger', () => ({
-  default: mockLogger,
-}));
+jest.mock('../../src/utils/logger', () => mockLogger);
 
 jest.mock('../../src/config/redis', () => ({
   redis: mockRedis,
@@ -108,7 +106,7 @@ describe('OpenAIRecommendationService', () => {
   };
 
   beforeEach(() => {
-    service = new OpenAIRecommendationService(mockPrisma as any);
+    service = new OpenAIRecommendationService();
     jest.clearAllMocks();
     
     // Setup default mock behaviors

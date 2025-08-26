@@ -630,3 +630,168 @@ When implementing new features:
 5. ✅ **Test with proper mocking strategies**
 
 This helps maintain architectural integrity and prevents regression to problematic approaches.
+
+## Service Integration Anti-Patterns
+
+### ❌ Dependency Injection for External Services Using Centralized Clients
+
+**Wrong Approach**:
+```typescript
+// In OpenAI service implementation
+export class OpenAIRecommendationService {
+  private readonly prisma: PrismaClient;
+
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
+    this.openaiClient = new OpenAI({...});
+  }
+}
+
+// In tests
+const mockPrisma = {
+  song: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+  },
+};
+
+service = new OpenAIRecommendationService(mockPrisma as any);
+```
+
+**Why It's Wrong**:
+- Violates established singleton pattern for database client
+- Creates inconsistency with other services that use centralized prisma
+- Complicates testing by requiring dependency injection in tests but not production
+- Creates multiple potential database connections instead of using connection pooling
+- Makes service instantiation different between test and production environments
+
+**Correct Approach**:
+```typescript
+// Use centralized singleton like other services
+import { prisma } from '../database/prisma';
+
+export class OpenAIRecommendationService {
+  constructor() {
+    this.openaiClient = new OpenAI({...});
+  }
+
+  public async generateRecommendations(songId: string) {
+    const inputSong = await prisma.song.findUnique({
+      where: { id: songId },
+    });
+    // ... rest of implementation
+  }
+}
+
+// Test mocking at module level
+jest.mock('../../src/database/prisma', () => ({
+  prisma: {
+    song: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+    },
+    aIRecommendation: {
+      createMany: jest.fn(),
+    },
+  },
+}));
+
+service = new OpenAIRecommendationService(); // Same as production
+```
+
+### ❌ Inconsistent Service Constructor Patterns
+
+**Wrong Approach**:
+```typescript
+// Mix of dependency injection and direct imports
+export class OpenAIRecommendationService {
+  constructor(prisma: PrismaClient) { // DI for one dependency
+    this.prisma = prisma;
+    this.openaiClient = new OpenAI({
+      apiKey: config.openai.apiKey, // Direct import for config
+    });
+    // Direct import for redis in methods
+  }
+  
+  async cacheRecommendations() {
+    await redis.setex(key, ttl, data); // Direct redis import
+  }
+}
+```
+
+**Why It's Wrong**:
+- Inconsistent dependency management strategy
+- Some dependencies injected, others used directly
+- Makes testing and mocking inconsistent
+- Violates single responsibility for dependency management
+
+**Correct Approach**:
+```typescript
+// Consistent use of centralized singletons
+import { prisma } from '../database/prisma';
+import { redis } from '../config/redis';
+import { config } from '../config/environment';
+
+export class OpenAIRecommendationService {
+  constructor() {
+    this.openaiClient = new OpenAI({
+      apiKey: config.openai.apiKey,
+    });
+  }
+  
+  async generateRecommendations() {
+    await prisma.song.findUnique({...});
+  }
+  
+  async cacheRecommendations() {
+    await redis.setex(key, ttl, data);
+  }
+}
+```
+
+### ❌ Missing Error Context in External API Services
+
+**Wrong Approach**:
+```typescript
+try {
+  const response = await this.openaiClient.chat.completions.create({...});
+  return response;
+} catch (error) {
+  logger.error('OpenAI call failed', { error: error.message });
+  throw new Error('API call failed'); // Generic error, lost context
+}
+```
+
+**Why It's Wrong**:
+- Loses specific OpenAI error information (rate limits, timeouts, server errors)
+- Generic error handling that doesn't help with debugging or retry logic
+- Missing service-specific context (songId, processing time, etc.)
+- No error categorization for different types of failures
+
+**Correct Approach**:
+```typescript
+try {
+  const response = await this.openaiClient.chat.completions.create({...});
+  return response;
+} catch (error) {
+  const processingTime = Date.now() - startTime;
+  
+  if (error instanceof Error) {
+    if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+      logger.error('OpenAI API timeout during recommendation generation', {
+        songId,
+        processingTime,
+        error: error.message,
+      });
+      throw new OpenAIRecommendationError('OpenAI API request timeout', 408, error);
+    }
+
+    if ('status' in error && (error as any).status === 429) {
+      logger.warn('OpenAI API rate limit hit', { songId, processingTime });
+      throw new OpenAIRecommendationError('OpenAI API rate limit exceeded', 429, error);
+    }
+
+    // More specific error handling...
+  }
+}
+```
