@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../database/prisma';
 import { 
   validateRequest,
   registerRequestSchema,
@@ -28,7 +28,6 @@ import { redis } from '../config/redis';
 import { config } from '../config/environment';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Enhanced rate limiting for authentication endpoints
 const authRateLimit = rateLimit({
@@ -118,6 +117,7 @@ router.post(
           id: true,
           email: true,
           name: true,
+          emailVerified: true,
           createdAt: true
         }
       });
@@ -141,7 +141,7 @@ router.post(
       // Store refresh token in Redis
       await redis.setex(
         `refresh_token:${user.id}:${refreshTokenData.token}`,
-        30 * 24 * 60 * 60, // 30 days
+        604800, // 7 days
         JSON.stringify({
           userData: tokenUser,
           deviceInfo: req.get('User-Agent'),
@@ -164,7 +164,8 @@ router.post(
           tokens: {
             accessToken,
             refreshToken: refreshTokenData.token,
-            expiresIn: config.security.jwt.expiresIn
+            expiresIn: 900, // 15 minutes in seconds
+            tokenType: 'Bearer'
           }
         }
       ));
@@ -241,7 +242,7 @@ router.post(
       // Store refresh token in Redis
       await redis.setex(
         `refresh_token:${user.id}:${refreshTokenData.token}`,
-        30 * 24 * 60 * 60, // 30 days
+        604800, // 7 days
         JSON.stringify({
           userData: tokenUser,
           deviceInfo: req.get('User-Agent'),
@@ -275,7 +276,8 @@ router.post(
           tokens: {
             accessToken,
             refreshToken: refreshTokenData.token,
-            expiresIn: config.security.jwt.expiresIn
+            expiresIn: 900, // 15 minutes in seconds
+            tokenType: 'Bearer'
           }
         }
       ));
@@ -320,7 +322,8 @@ router.post(
           tokens: {
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken,
-            expiresIn: config.security.jwt.expiresIn
+            expiresIn: 900, // 15 minutes in seconds
+            tokenType: 'Bearer'
           }
         }
       ));

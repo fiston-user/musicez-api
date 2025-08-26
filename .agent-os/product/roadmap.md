@@ -22,7 +22,7 @@
 
 ### Features
 
-- [ ] Basic authentication system with JWT tokens `M`
+- [x] Basic authentication system with JWT tokens `M`
 - [ ] Song search endpoint with fuzzy matching `M`  
 - [ ] Integration with Spotify Web API for song metadata `L`
 - [ ] AI recommendation engine using OpenAI GPT-4 `L`
