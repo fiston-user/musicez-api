@@ -1,0 +1,3 @@
+# Spec Summary (Lite)
+
+Implement an AI-powered music recommendation engine using OpenAI GPT-4 that analyzes song metadata and musical attributes to provide intelligent, personalized song recommendations with 70% accuracy. The engine will serve as core functionality through a RESTful API endpoint accepting song IDs and returning 10+ ranked recommendations with similarity scores, while also enhancing existing search results with optional AI suggestions.

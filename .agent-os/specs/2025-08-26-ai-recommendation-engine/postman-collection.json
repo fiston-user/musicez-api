@@ -1,0 +1,292 @@
+{
+  "info": {
+    "name": "AI Recommendation Engine API Collection",
+    "description": "Postman collection for testing AI Recommendation Engine endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "songId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('authToken', response.data.tokens.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Song Search",
+      "item": [
+        {
+          "name": "Search Songs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search?q=queen&limit=10&threshold=0.1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "queen"
+                },
+                {
+                  "key": "limit", 
+                  "value": "10"
+                },
+                {
+                  "key": "threshold",
+                  "value": "0.1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data.results.length > 0) {",
+                  "        pm.collectionVariables.set('songId', response.data.results[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Enhanced Search with AI Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search?q=queen&limit=5&threshold=0.1&recommend=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "queen"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "threshold",
+                  "value": "0.1"
+                },
+                {
+                  "key": "recommend",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Recommendations",
+      "item": [
+        {
+          "name": "Generate Recommendations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"songId\": \"{{songId}}\",\n  \"limit\": 10,\n  \"includeReason\": true,\n  \"fresh\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recommendations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "recommendations"]
+            }
+          }
+        },
+        {
+          "name": "Generate Recommendations (Fresh)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"songId\": \"{{songId}}\",\n  \"limit\": 5,\n  \"includeReason\": false,\n  \"fresh\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recommendations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "recommendations"]
+            }
+          }
+        },
+        {
+          "name": "Batch Recommendations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"songIds\": [\"{{songId}}\"],\n  \"limit\": 5,\n  \"includeReason\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recommendations/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "recommendations", "batch"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Testing",
+      "item": [
+        {
+          "name": "Invalid Song ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"songId\": \"invalid-id\",\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recommendations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "recommendations"]
+            }
+          }
+        },
+        {
+          "name": "Rate Limit Test (No Auth)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"songId\": \"{{songId}}\",\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/recommendations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "recommendations"]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

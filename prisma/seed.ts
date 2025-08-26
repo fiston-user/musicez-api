@@ -10,6 +10,7 @@ async function main() {
   await prisma.spotifySyncJob.deleteMany();
   await prisma.spotifyConnection.deleteMany();
   await prisma.userPreference.deleteMany();
+  await prisma.aIRecommendation.deleteMany();
   await prisma.recommendedSong.deleteMany();
   await prisma.recommendation.deleteMany();
   await prisma.song.deleteMany();
@@ -429,6 +430,102 @@ async function main() {
   ]);
   console.log(`✅ Created ${requestLogs.length} request logs`);
 
+  // Create sample AI recommendations for testing
+  const aiRecommendations = await Promise.all([
+    prisma.aIRecommendation.create({
+      data: {
+        inputSongId: songs[0].id, // Bohemian Rhapsody
+        recommendedSongId: songs[1].id, // Stairway to Heaven
+        score: 0.92,
+        reason: 'Both are epic classic rock songs with complex compositions and operatic elements',
+        modelVersion: 'gpt-4',
+        cachedUntil: new Date(Date.now() + 3600000), // 1 hour from now
+        requestParameters: {
+          limit: 10,
+          includeReason: true,
+          context: 'classic_rock_similarity',
+        },
+      },
+    }),
+    prisma.aIRecommendation.create({
+      data: {
+        inputSongId: songs[0].id, // Bohemian Rhapsody  
+        recommendedSongId: songs[5].id, // Smells Like Teen Spirit
+        score: 0.78,
+        reason: 'Similar high energy and cultural impact in rock history',
+        modelVersion: 'gpt-4',
+        cachedUntil: new Date(Date.now() + 3600000), // 1 hour from now
+        requestParameters: {
+          limit: 10,
+          includeReason: true,
+          context: 'cultural_impact',
+        },
+      },
+    }),
+    prisma.aIRecommendation.create({
+      data: {
+        inputSongId: songs[2].id, // Shape of You
+        recommendedSongId: songs[3].id, // Blinding Lights
+        score: 0.85,
+        reason: 'Both are modern pop hits with strong commercial appeal and danceable rhythms',
+        modelVersion: 'gpt-4',
+        cachedUntil: new Date(Date.now() + 3600000), // 1 hour from now
+        requestParameters: {
+          limit: 10,
+          includeReason: true,
+          context: 'modern_pop_hits',
+        },
+      },
+    }),
+    prisma.aIRecommendation.create({
+      data: {
+        inputSongId: songs[1].id, // Stairway to Heaven
+        recommendedSongId: songs[7].id, // Hotel California
+        score: 0.88,
+        reason: 'Classic rock anthems with intricate guitar work and storytelling',
+        modelVersion: 'gpt-4',
+        cachedUntil: new Date(Date.now() + 7200000), // 2 hours from now
+        requestParameters: {
+          limit: 15,
+          includeReason: true,
+          context: 'guitar_driven_rock',
+        },
+      },
+    }),
+    prisma.aIRecommendation.create({
+      data: {
+        inputSongId: songs[8].id, // Imagine
+        recommendedSongId: songs[9].id, // Wonderwall
+        score: 0.73,
+        reason: 'Both are iconic songs with simple but powerful melodies and universal appeal',
+        modelVersion: 'gpt-4',
+        cachedUntil: new Date(Date.now() - 1800000), // Expired 30 minutes ago (for testing cache cleanup)
+        requestParameters: {
+          limit: 5,
+          includeReason: false,
+          context: 'timeless_melodies',
+        },
+      },
+    }),
+    // Add a recommendation with different model version for testing
+    prisma.aIRecommendation.create({
+      data: {
+        inputSongId: songs[4].id, // One More Time
+        recommendedSongId: songs[3].id, // Blinding Lights
+        score: 0.67,
+        reason: 'Electronic/dance influences with upbeat tempo',
+        modelVersion: 'gpt-3.5-turbo',
+        cachedUntil: new Date(Date.now() + 1800000), // 30 minutes from now
+        requestParameters: {
+          limit: 8,
+          includeReason: true,
+          context: 'electronic_dance',
+        },
+      },
+    }),
+  ]);
+  console.log(`✅ Created ${aiRecommendations.length} AI recommendations`);
+
   console.log('🎉 Database seeding completed successfully!');
   console.log('\n📊 Summary:');
   console.log(`  - API Keys: ${apiKeys.length}`);
@@ -439,6 +536,7 @@ async function main() {
   console.log(`  - Spotify Connections: ${spotifyConnections.length}`);
   console.log(`  - Spotify Sync Jobs: ${spotifySyncJobs.length}`);
   console.log(`  - Request Logs: ${requestLogs.length}`);
+  console.log(`  - AI Recommendations: ${aiRecommendations.length}`);
 }
 
 main()

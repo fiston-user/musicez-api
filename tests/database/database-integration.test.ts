@@ -9,6 +9,7 @@ describe('Database Integration Tests', () => {
     prisma = new PrismaClient();
     
     // Clean test database
+    await prisma.aIRecommendation.deleteMany();
     await prisma.userPreference.deleteMany();
     await prisma.recommendedSong.deleteMany();
     await prisma.recommendation.deleteMany();
