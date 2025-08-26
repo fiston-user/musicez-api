@@ -69,37 +69,37 @@ class MockRedis implements RedisClient {
 
 // Real Redis implementation (to be implemented when Redis is fully integrated)
 class RealRedis implements RedisClient {
-  async setex(key: string, ttl: number, value: string): Promise<string> {
+  async setex(_key: string, _ttl: number, _value: string): Promise<string> {
     // TODO: Implement real Redis connection
     throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
   }
 
-  async get(key: string): Promise<string | null> {
+  async get(_key: string): Promise<string | null> {
     // TODO: Implement real Redis connection
     throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
   }
 
-  async del(key: string): Promise<number> {
+  async del(_key: string): Promise<number> {
     // TODO: Implement real Redis connection
     throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
   }
 
-  async keys(pattern: string): Promise<string[]> {
+  async keys(_pattern: string): Promise<string[]> {
     // TODO: Implement real Redis connection
     throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
   }
 
-  async exists(key: string): Promise<number> {
+  async exists(_key: string): Promise<number> {
     // TODO: Implement real Redis connection
     throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
   }
 
-  async expire(key: string, ttl: number): Promise<number> {
+  async expire(_key: string, _ttl: number): Promise<number> {
     // TODO: Implement real Redis connection
     throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
   }
 
-  async ttl(key: string): Promise<number> {
+  async ttl(_key: string): Promise<number> {
     // TODO: Implement real Redis connection
     throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
   }
@@ -121,6 +121,3 @@ function createRedisClient(): RedisClient {
 
 // Export Redis client instance
 export const redis = createRedisClient();
-
-// Export types for use in other modules
-export type { RedisClient };

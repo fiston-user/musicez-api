@@ -1,4 +1,4 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 // Import routers
 import { healthRouter } from './routes/health.routes';
 import { rootRouter } from './routes/root.routes';
+import authRouter from './routes/auth.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -17,91 +18,85 @@ import { requestIdMiddleware } from './middleware/requestId.middleware';
 // Import configuration
 import { config } from './config/environment';
 
-export function createApp(): Application {
+// Import logging
+import logger from './utils/logger';
+
+/**
+ * Create and configure Express application
+ */
+function createApp(): Application {
   const app = express();
 
-  // Request ID middleware (should be first)
+  // Trust proxy headers for rate limiting and IP detection
+  app.set('trust proxy', 1);
+
+  // Request ID middleware (first to add to all requests)
   app.use(requestIdMiddleware);
 
   // Security middleware
   app.use(helmet({
-    contentSecurityPolicy: false, // Disable for API
+    crossOriginEmbedderPolicy: false, // Allow embedding for development
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
   }));
 
   // CORS configuration
   app.use(cors({
     origin: config.cors.origin,
-    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    credentials: true,
   }));
+
+  // Compression middleware
+  app.use(compression());
 
   // Body parsing middleware
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Compression middleware
-  app.use(compression({
-    filter: (req, res) => {
-      if (req.headers['x-no-compression']) {
-        return false;
+  // Logging middleware
+  app.use(morgan('combined', {
+    stream: {
+      write: (message: string) => {
+        logger.info(message.trim());
       }
-      return compression.filter(req, res);
-    },
-    threshold: 1024, // Only compress responses larger than 1KB
+    }
   }));
 
-  // Request logging
-  if (config.app.env !== 'test') {
-    const logFormat = config.app.env === 'production' ? 'combined' : 'dev';
-    app.use(morgan(logFormat, {
-      skip: (req) => req.path === '/health', // Don't log health checks
-      stream: {
-        write: (message: string) => {
-          console.log(message.trim());
-        },
-      },
-    }));
-  }
-
-  // Rate limiting
-  const limiter = rateLimit({
+  // Global rate limiting (more permissive than auth-specific limits)
+  const globalRateLimit = rateLimit({
     windowMs: config.rateLimit.windowMs,
     max: config.rateLimit.maxRequests,
-    message: 'Too many requests from this IP, please try again later.',
+    message: {
+      success: false,
+      error: {
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: 'Too many requests. Please try again later.',
+      },
+    },
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (_req: Request, res: Response) => {
-      res.status(429).json({
-        success: false,
-        error: {
-          code: 'RATE_LIMIT_EXCEEDED',
-          message: 'Too many requests from this IP, please try again later.',
-        },
-        requestId: res.locals.requestId,
-      });
+    skip: () => {
+      // Skip rate limiting in test environment
+      return config.app.isTest;
     },
   });
 
-  // Apply rate limiting to all routes except health
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === '/health') {
-      return next();
-    }
-    return limiter(req, res, next);
-  });
-
-  // Trust proxy
-  app.set('trust proxy', 1);
+  app.use(globalRateLimit);
 
   // Routes
   app.use('/', rootRouter);
   app.use('/health', healthRouter);
+  app.use(`${config.api.prefix}/${config.api.version}/auth`, authRouter);
 
-  // API routes will be mounted here
-  // app.use('/api/v1', apiV1Routes);
-
-  // 404 handler
+  // 404 handler (must be after all routes)
   app.use(notFoundHandler);
 
   // Error handler (must be last)

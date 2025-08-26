@@ -29,11 +29,11 @@ const format = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.colorize({ all: true }),
   winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`,
+    (info: winston.Logform.TransformableInfo) => `${info.timestamp} ${info.level}: ${info.message}`,
   ),
 );
 
-const transports = [
+const transports: winston.transport[] = [
   new winston.transports.Console({
     format: config.app.env === 'production'
       ? winston.format.json()
