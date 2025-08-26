@@ -1,0 +1,3 @@
+# Spec Summary (Lite)
+
+Implement a hybrid Spotify Web API integration that supplements the existing local song database with fresh Spotify metadata while providing expanded search capabilities. This integration maintains local search performance while offering access to Spotify's comprehensive music catalog, real-time popularity data, and optional user account integration for personalized features. The system will enhance the existing search API with Spotify audio features, preview URLs, and up-to-date metadata through background synchronization and on-demand enrichment.

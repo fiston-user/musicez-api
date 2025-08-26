@@ -46,42 +46,56 @@ model RequestLog {
 }
 
 model User {
-  id              String           @id @default(uuid())
-  email           String?          @unique
-  password        String           @default("")
-  name            String?
-  emailVerified   Boolean          @default(false)
-  lastLoginAt     DateTime?
-  apiKeyId        String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  favoriteGenres  String[]
-  recommendations Recommendation[]
-  preferences     UserPreference[]
+  id                 String              @id @default(uuid())
+  email              String?             @unique
+  password           String              @default("")
+  name               String?
+  emailVerified      Boolean             @default(false)
+  lastLoginAt        DateTime?
+  apiKeyId           String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  favoriteGenres     String[]
+  recommendations    Recommendation[]
+  preferences        UserPreference[]
+  spotifyConnection  SpotifyConnection?
+  spotifySyncJobs    SpotifySyncJob[]
 
   @@index([email])
   @@map("users")
 }
 
 model Song {
-  id               String            @id @default(uuid())
-  spotifyId        String?           @unique
-  title            String
-  artist           String
-  album            String?
-  genre            String?
-  releaseYear      Int?
-  tempo            Float?
-  key              String?
-  energy           Float?
-  danceability     Float?
-  valence          Float?
-  acousticness     Float?
-  instrumentalness Float?
-  popularity       Int?
-  duration         Int?
-  previewUrl       String?
-  searchVector     String?           @db.Text
+  id                    String            @id @default(uuid())
+  spotifyId             String?           @unique
+  title                 String
+  artist                String
+  album                 String?
+  genre                 String?
+  releaseYear           Int?
+  tempo                 Float?
+  key                   String?
+  energy                Float?
+  danceability          Float?
+  valence               Float?
+  acousticness          Float?
+  instrumentalness      Float?
+  popularity            Int?
+  duration              Int?
+  previewUrl            String?
+  searchVector          String?           @db.Text
+  
+  // New Spotify integration fields
+  spotifyLastSync       DateTime?
+  spotifyPopularity     Int?
+  spotifyPreviewUrl     String?
+  spotifyExternalUrl    String?
+  audioFeaturesSynced   Boolean           @default(false)
+  lastPopularityUpdate  DateTime?
+  speechiness           Float?
+  liveness              Float?
+  loudness              Float?
+  
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   recommendations  Recommendation[]
@@ -92,6 +106,8 @@ model Song {
   @@index([artist])
   @@index([title])
   @@index([searchVector])
+  @@index([spotifyLastSync, audioFeaturesSynced], map: "idx_songs_spotify_sync")
+  @@index([spotifyPopularity], map: "idx_songs_spotify_popularity")
   @@map("songs")
 }
 
@@ -147,4 +163,42 @@ model UserPreference {
   @@unique([userId, songId])
   @@index([userId])
   @@map("user_preferences")
+}
+
+model SpotifyConnection {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  spotifyUserId   String   @unique
+  accessToken     String
+  refreshToken    String
+  tokenExpiresAt  DateTime
+  scope           String
+  displayName     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("spotify_connections")
+}
+
+model SpotifySyncJob {
+  id              String    @id @default(uuid())
+  jobType         String
+  status          String    @default("pending")
+  targetId        String?
+  parameters      Json?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  errorMessage    String?
+  retryCount      Int       @default(0)
+  itemsProcessed  Int       @default(0)
+  totalItems      Int?
+  userId          String
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt], map: "idx_spotify_jobs_status")
+  @@index([jobType, status], map: "idx_spotify_jobs_type")
+  @@index([userId], map: "idx_spotify_jobs_user_id")
+  @@map("spotify_sync_jobs")
 }

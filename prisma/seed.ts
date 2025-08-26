@@ -6,7 +6,9 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding...');
 
-  // Clean existing data
+  // Clean existing data (order matters due to foreign key constraints)
+  await prisma.spotifySyncJob.deleteMany();
+  await prisma.spotifyConnection.deleteMany();
   await prisma.userPreference.deleteMany();
   await prisma.recommendedSong.deleteMany();
   await prisma.recommendation.deleteMany();
@@ -83,6 +85,16 @@ async function main() {
         duration: 354320,
         spotifyId: 'spotify:track:6l8GvAyoUZwWDghiUvd3zba',
         previewUrl: 'https://p.scdn.co/mp3-preview/bohemian-rhapsody',
+        // New Spotify integration fields
+        spotifyLastSync: new Date(Date.now() - 86400000), // 1 day ago
+        spotifyPopularity: 95,
+        spotifyPreviewUrl: 'https://p.scdn.co/mp3-preview/bohemian-rhapsody-spotify',
+        spotifyExternalUrl: 'https://open.spotify.com/track/6l8GvAyoUZwWDghiUvd3zba',
+        audioFeaturesSynced: true,
+        lastPopularityUpdate: new Date(Date.now() - 3600000), // 1 hour ago
+        speechiness: 0.042,
+        liveness: 0.158,
+        loudness: -10.831,
       },
     }),
     prisma.song.create({
@@ -139,6 +151,16 @@ async function main() {
         instrumentalness: 0.0000954,
         popularity: 95,
         duration: 200040,
+        // New Spotify integration fields  
+        spotifyLastSync: new Date(Date.now() - 43200000), // 12 hours ago
+        spotifyPopularity: 95,
+        spotifyPreviewUrl: 'https://p.scdn.co/mp3-preview/blinding-lights',
+        spotifyExternalUrl: 'https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b',
+        audioFeaturesSynced: true,
+        lastPopularityUpdate: new Date(Date.now() - 7200000), // 2 hours ago
+        speechiness: 0.0598,
+        liveness: 0.0897,
+        loudness: -5.934,
       },
     }),
     prisma.song.create({
@@ -292,6 +314,96 @@ async function main() {
   ]);
   console.log(`✅ Created ${preferences.length} user preferences`);
 
+  // Create Spotify connections for testing
+  const spotifyConnections = await Promise.all([
+    prisma.spotifyConnection.create({
+      data: {
+        userId: users[0].id,
+        spotifyUserId: 'spotify_user_john_doe',
+        accessToken: 'encrypted_access_token_john_doe_example', // This would be encrypted in real implementation
+        refreshToken: 'encrypted_refresh_token_john_doe_example',
+        tokenExpiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+        scope: 'user-read-private user-library-read playlist-read-private user-recently-played',
+        displayName: 'John Doe (Spotify)',
+      },
+    }),
+    prisma.spotifyConnection.create({
+      data: {
+        userId: users[1].id,
+        spotifyUserId: 'spotify_user_jane_smith',
+        accessToken: 'encrypted_access_token_jane_smith_example',
+        refreshToken: 'encrypted_refresh_token_jane_smith_example',
+        tokenExpiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+        scope: 'user-read-private user-library-read playlist-read-private',
+        displayName: 'Jane Smith (Spotify)',
+      },
+    }),
+  ]);
+  console.log(`✅ Created ${spotifyConnections.length} Spotify connections`);
+
+  // Create sample Spotify sync jobs
+  const spotifySyncJobs = await Promise.all([
+    prisma.spotifySyncJob.create({
+      data: {
+        jobType: 'track_sync',
+        userId: users[0].id,
+        status: 'completed',
+        targetId: songs[0].spotifyId || 'spotify:track:example1',
+        parameters: {
+          refreshMetadata: true,
+          includeAudioFeatures: true,
+        },
+        startedAt: new Date(Date.now() - 300000), // 5 minutes ago
+        completedAt: new Date(Date.now() - 60000), // 1 minute ago
+        itemsProcessed: 1,
+        totalItems: 1,
+      },
+    }),
+    prisma.spotifySyncJob.create({
+      data: {
+        jobType: 'user_library',
+        userId: users[0].id,
+        status: 'completed',
+        parameters: {
+          syncPlaylists: true,
+          syncSavedTracks: true,
+        },
+        startedAt: new Date(Date.now() - 600000), // 10 minutes ago
+        completedAt: new Date(Date.now() - 480000), // 8 minutes ago
+        itemsProcessed: 25,
+        totalItems: 25,
+      },
+    }),
+    prisma.spotifySyncJob.create({
+      data: {
+        jobType: 'popularity_update',
+        userId: users[1].id,
+        status: 'running',
+        startedAt: new Date(Date.now() - 30000), // 30 seconds ago
+        itemsProcessed: 5,
+        totalItems: 10,
+      },
+    }),
+    prisma.spotifySyncJob.create({
+      data: {
+        jobType: 'track_sync',
+        userId: users[1].id,
+        status: 'failed',
+        targetId: 'spotify:track:invalid_id',
+        parameters: {
+          refreshMetadata: true,
+        },
+        startedAt: new Date(Date.now() - 120000), // 2 minutes ago
+        completedAt: new Date(Date.now() - 100000), // 1 minute 40 seconds ago
+        errorMessage: 'Spotify API rate limit exceeded',
+        retryCount: 3,
+        itemsProcessed: 0,
+        totalItems: 1,
+      },
+    }),
+  ]);
+  console.log(`✅ Created ${spotifySyncJobs.length} Spotify sync jobs`);
+
   // Create sample request logs
   const requestLogs = await Promise.all([
     prisma.requestLog.create({
@@ -324,6 +436,8 @@ async function main() {
   console.log(`  - Songs: ${songs.length}`);
   console.log(`  - Recommendations: 1`);
   console.log(`  - User Preferences: ${preferences.length}`);
+  console.log(`  - Spotify Connections: ${spotifyConnections.length}`);
+  console.log(`  - Spotify Sync Jobs: ${spotifySyncJobs.length}`);
   console.log(`  - Request Logs: ${requestLogs.length}`);
 }
 
