@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
-describe('AIRecommendation Database Operations', () => {
+describe("AIRecommendation Database Operations", () => {
   let prisma: PrismaClient;
   let testSong1: any;
   let testSong2: any;
@@ -8,7 +8,7 @@ describe('AIRecommendation Database Operations', () => {
 
   beforeAll(async () => {
     prisma = new PrismaClient();
-    
+
     // Clean test data (order matters for foreign key constraints)
     await prisma.aIRecommendation.deleteMany();
     await prisma.recommendedSong.deleteMany();
@@ -19,12 +19,12 @@ describe('AIRecommendation Database Operations', () => {
     // Create test songs
     testSong1 = await prisma.song.create({
       data: {
-        title: 'Bohemian Rhapsody',
-        artist: 'Queen',
-        album: 'A Night at the Opera',
-        genre: 'rock',
+        title: "Bohemian Rhapsody",
+        artist: "Queen",
+        album: "A Night at the Opera",
+        genre: "rock",
         tempo: 76,
-        key: 'Bb',
+        key: "Bb",
         energy: 0.404,
         danceability: 0.391,
         valence: 0.228,
@@ -35,12 +35,12 @@ describe('AIRecommendation Database Operations', () => {
 
     testSong2 = await prisma.song.create({
       data: {
-        title: 'Stairway to Heaven',
-        artist: 'Led Zeppelin',
-        album: 'Led Zeppelin IV',
-        genre: 'rock',
+        title: "Stairway to Heaven",
+        artist: "Led Zeppelin",
+        album: "Led Zeppelin IV",
+        genre: "rock",
         tempo: 83,
-        key: 'A',
+        key: "A",
         energy: 0.466,
         danceability: 0.342,
         valence: 0.329,
@@ -51,12 +51,12 @@ describe('AIRecommendation Database Operations', () => {
 
     testSong3 = await prisma.song.create({
       data: {
-        title: 'Hotel California',
-        artist: 'Eagles',
-        album: 'Hotel California',
-        genre: 'rock',
+        title: "Hotel California",
+        artist: "Eagles",
+        album: "Hotel California",
+        genre: "rock",
         tempo: 75,
-        key: 'B',
+        key: "B",
         energy: 0.456,
         danceability: 0.378,
         valence: 0.412,
@@ -81,8 +81,8 @@ describe('AIRecommendation Database Operations', () => {
     await prisma.aIRecommendation.deleteMany();
   });
 
-  describe('Create Operations', () => {
-    it('should create a single AI recommendation', async () => {
+  describe("Create Operations", () => {
+    it("should create a single AI recommendation", async () => {
       const now = new Date();
       const cachedUntil = new Date(now.getTime() + 3600000); // 1 hour from now
 
@@ -91,8 +91,8 @@ describe('AIRecommendation Database Operations', () => {
           inputSongId: testSong1.id,
           recommendedSongId: testSong2.id,
           score: 0.85,
-          reason: 'Similar classic rock era with epic composition style',
-          modelVersion: 'gpt-4',
+          reason: "Similar classic rock era with epic composition style",
+          modelVersion: "gpt-4",
           cachedUntil,
           requestParameters: {
             limit: 10,
@@ -111,8 +111,10 @@ describe('AIRecommendation Database Operations', () => {
       expect(aiRec.inputSongId).toBe(testSong1.id);
       expect(aiRec.recommendedSongId).toBe(testSong2.id);
       expect(aiRec.score).toBe(0.85);
-      expect(aiRec.reason).toBe('Similar classic rock era with epic composition style');
-      expect(aiRec.modelVersion).toBe('gpt-4');
+      expect(aiRec.reason).toBe(
+        "Similar classic rock era with epic composition style"
+      );
+      expect(aiRec.modelVersion).toBe("gpt-4");
       expect(aiRec.cachedUntil).toEqual(cachedUntil);
       expect(aiRec.requestParameters).toEqual({
         limit: 10,
@@ -120,11 +122,11 @@ describe('AIRecommendation Database Operations', () => {
         fresh: false,
       });
       expect(aiRec.generatedAt).toBeInstanceOf(Date);
-      expect(aiRec.inputSong.title).toBe('Bohemian Rhapsody');
-      expect(aiRec.recommendedSong.title).toBe('Stairway to Heaven');
+      expect(aiRec.inputSong.title).toBe("Bohemian Rhapsody");
+      expect(aiRec.recommendedSong.title).toBe("Stairway to Heaven");
     });
 
-    it('should create AI recommendation with default values', async () => {
+    it("should create AI recommendation with default values", async () => {
       const aiRec = await prisma.aIRecommendation.create({
         data: {
           inputSongId: testSong1.id,
@@ -133,21 +135,21 @@ describe('AIRecommendation Database Operations', () => {
         },
       });
 
-      expect(aiRec.modelVersion).toBe('gpt-4'); // Default value
+      expect(aiRec.modelVersion).toBe("gpt-4"); // Default value
       expect(aiRec.reason).toBeNull();
       expect(aiRec.cachedUntil).toBeNull();
       expect(aiRec.requestParameters).toBeNull();
       expect(aiRec.generatedAt).toBeInstanceOf(Date);
     });
 
-    it('should create multiple AI recommendations for same input song', async () => {
+    it("should create multiple AI recommendations for same input song", async () => {
       const recommendations = await Promise.all([
         prisma.aIRecommendation.create({
           data: {
             inputSongId: testSong1.id,
             recommendedSongId: testSong2.id,
             score: 0.85,
-            reason: 'First recommendation',
+            reason: "First recommendation",
           },
         }),
         prisma.aIRecommendation.create({
@@ -155,7 +157,7 @@ describe('AIRecommendation Database Operations', () => {
             inputSongId: testSong1.id,
             recommendedSongId: testSong3.id,
             score: 0.72,
-            reason: 'Second recommendation',
+            reason: "Second recommendation",
           },
         }),
       ]);
@@ -163,11 +165,13 @@ describe('AIRecommendation Database Operations', () => {
       expect(recommendations).toHaveLength(2);
       expect(recommendations[0].inputSongId).toBe(testSong1.id);
       expect(recommendations[1].inputSongId).toBe(testSong1.id);
-      expect(recommendations[0].recommendedSongId).not.toBe(recommendations[1].recommendedSongId);
+      expect(recommendations[0].recommendedSongId).not.toBe(
+        recommendations[1].recommendedSongId
+      );
     });
   });
 
-  describe('Read Operations', () => {
+  describe("Read Operations", () => {
     beforeEach(async () => {
       // Create test data for read operations
       await Promise.all([
@@ -176,7 +180,7 @@ describe('AIRecommendation Database Operations', () => {
             inputSongId: testSong1.id,
             recommendedSongId: testSong2.id,
             score: 0.85,
-            reason: 'High similarity',
+            reason: "High similarity",
             cachedUntil: new Date(Date.now() + 3600000),
           },
         }),
@@ -185,7 +189,7 @@ describe('AIRecommendation Database Operations', () => {
             inputSongId: testSong1.id,
             recommendedSongId: testSong3.id,
             score: 0.72,
-            reason: 'Moderate similarity',
+            reason: "Moderate similarity",
             cachedUntil: new Date(Date.now() + 3600000),
           },
         }),
@@ -193,15 +197,15 @@ describe('AIRecommendation Database Operations', () => {
           data: {
             inputSongId: testSong2.id,
             recommendedSongId: testSong1.id,
-            score: 0.90,
-            reason: 'Reverse recommendation',
+            score: 0.9,
+            reason: "Reverse recommendation",
             cachedUntil: new Date(Date.now() - 3600000), // Expired
           },
         }),
       ]);
     });
 
-    it('should find recommendations by input song', async () => {
+    it("should find recommendations by input song", async () => {
       const recommendations = await prisma.aIRecommendation.findMany({
         where: {
           inputSongId: testSong1.id,
@@ -210,18 +214,20 @@ describe('AIRecommendation Database Operations', () => {
           recommendedSong: true,
         },
         orderBy: {
-          score: 'desc',
+          score: "desc",
         },
       });
 
       expect(recommendations).toHaveLength(2);
       expect(recommendations[0].score).toBe(0.85);
       expect(recommendations[1].score).toBe(0.72);
-      expect(recommendations[0].recommendedSong.title).toBe('Stairway to Heaven');
-      expect(recommendations[1].recommendedSong.title).toBe('Hotel California');
+      expect(recommendations[0].recommendedSong.title).toBe(
+        "Stairway to Heaven"
+      );
+      expect(recommendations[1].recommendedSong.title).toBe("Hotel California");
     });
 
-    it('should find recommendations with score threshold', async () => {
+    it("should find recommendations with score threshold", async () => {
       const highScoreRecs = await prisma.aIRecommendation.findMany({
         where: {
           inputSongId: testSong1.id,
@@ -235,7 +241,7 @@ describe('AIRecommendation Database Operations', () => {
       expect(highScoreRecs[0].score).toBe(0.85);
     });
 
-    it('should find non-expired cached recommendations', async () => {
+    it("should find non-expired cached recommendations", async () => {
       const cachedRecs = await prisma.aIRecommendation.findMany({
         where: {
           inputSongId: testSong1.id,
@@ -244,15 +250,19 @@ describe('AIRecommendation Database Operations', () => {
           },
         },
         orderBy: {
-          score: 'desc',
+          score: "desc",
         },
       });
 
       expect(cachedRecs).toHaveLength(2);
-      expect(cachedRecs.every(rec => rec.cachedUntil && rec.cachedUntil > new Date())).toBe(true);
+      expect(
+        cachedRecs.every(
+          (rec) => rec.cachedUntil && rec.cachedUntil > new Date()
+        )
+      ).toBe(true);
     });
 
-    it('should find expired recommendations for cleanup', async () => {
+    it("should find expired recommendations for cleanup", async () => {
       const expiredRecs = await prisma.aIRecommendation.findMany({
         where: {
           cachedUntil: {
@@ -265,26 +275,26 @@ describe('AIRecommendation Database Operations', () => {
       expect(expiredRecs[0].inputSongId).toBe(testSong2.id);
     });
 
-    it('should find recommendations by model version', async () => {
+    it("should find recommendations by model version", async () => {
       // Create recommendation with different model version
       await prisma.aIRecommendation.create({
         data: {
           inputSongId: testSong2.id,
           recommendedSongId: testSong3.id,
           score: 0.65,
-          modelVersion: 'gpt-3.5-turbo',
+          modelVersion: "gpt-3.5-turbo",
         },
       });
 
       const gpt4Recs = await prisma.aIRecommendation.findMany({
         where: {
-          modelVersion: 'gpt-4',
+          modelVersion: "gpt-4",
         },
       });
 
       const gpt3Recs = await prisma.aIRecommendation.findMany({
         where: {
-          modelVersion: 'gpt-3.5-turbo',
+          modelVersion: "gpt-3.5-turbo",
         },
       });
 
@@ -293,7 +303,7 @@ describe('AIRecommendation Database Operations', () => {
     });
   });
 
-  describe('Update Operations', () => {
+  describe("Update Operations", () => {
     let testRecommendation: any;
 
     beforeEach(async () => {
@@ -302,25 +312,25 @@ describe('AIRecommendation Database Operations', () => {
           inputSongId: testSong1.id,
           recommendedSongId: testSong2.id,
           score: 0.75,
-          reason: 'Original reason',
+          reason: "Original reason",
           cachedUntil: new Date(Date.now() + 3600000),
         },
       });
     });
 
-    it('should update recommendation score', async () => {
+    it("should update recommendation score", async () => {
       const updated = await prisma.aIRecommendation.update({
         where: { id: testRecommendation.id },
         data: { score: 0.82 },
       });
 
       expect(updated.score).toBe(0.82);
-      expect(updated.reason).toBe('Original reason'); // Unchanged
+      expect(updated.reason).toBe("Original reason"); // Unchanged
     });
 
-    it('should update cache expiration', async () => {
+    it("should update cache expiration", async () => {
       const newCachedUntil = new Date(Date.now() + 7200000); // 2 hours from now
-      
+
       const updated = await prisma.aIRecommendation.update({
         where: { id: testRecommendation.id },
         data: { cachedUntil: newCachedUntil },
@@ -329,12 +339,12 @@ describe('AIRecommendation Database Operations', () => {
       expect(updated.cachedUntil).toEqual(newCachedUntil);
     });
 
-    it('should update request parameters', async () => {
+    it("should update request parameters", async () => {
       const newParameters = {
         limit: 20,
         includeReason: false,
         fresh: true,
-        context: 'mood-based',
+        context: "mood-based",
       };
 
       const updated = await prisma.aIRecommendation.update({
@@ -346,8 +356,8 @@ describe('AIRecommendation Database Operations', () => {
     });
   });
 
-  describe('Delete Operations', () => {
-    it('should delete single recommendation', async () => {
+  describe("Delete Operations", () => {
+    it("should delete single recommendation", async () => {
       const aiRec = await prisma.aIRecommendation.create({
         data: {
           inputSongId: testSong1.id,
@@ -367,7 +377,7 @@ describe('AIRecommendation Database Operations', () => {
       expect(found).toBeNull();
     });
 
-    it('should delete expired recommendations', async () => {
+    it("should delete expired recommendations", async () => {
       // Create expired and non-expired recommendations
       const now = new Date();
       await Promise.all([
@@ -401,10 +411,12 @@ describe('AIRecommendation Database Operations', () => {
 
       const remaining = await prisma.aIRecommendation.findMany();
       expect(remaining).toHaveLength(1);
-      expect(remaining[0].cachedUntil && remaining[0].cachedUntil > now).toBe(true);
+      expect(remaining[0].cachedUntil && remaining[0].cachedUntil > now).toBe(
+        true
+      );
     });
 
-    it('should delete recommendations for specific input song', async () => {
+    it("should delete recommendations for specific input song", async () => {
       await Promise.all([
         prisma.aIRecommendation.create({
           data: {
@@ -424,7 +436,7 @@ describe('AIRecommendation Database Operations', () => {
           data: {
             inputSongId: testSong2.id,
             recommendedSongId: testSong1.id,
-            score: 0.90,
+            score: 0.9,
           },
         }),
       ]);
@@ -443,7 +455,7 @@ describe('AIRecommendation Database Operations', () => {
     });
   });
 
-  describe('Complex Queries', () => {
+  describe("Complex Queries", () => {
     beforeEach(async () => {
       const now = new Date();
       await Promise.all([
@@ -452,8 +464,8 @@ describe('AIRecommendation Database Operations', () => {
             inputSongId: testSong1.id,
             recommendedSongId: testSong2.id,
             score: 0.95,
-            reason: 'Excellent match',
-            modelVersion: 'gpt-4',
+            reason: "Excellent match",
+            modelVersion: "gpt-4",
             cachedUntil: new Date(now.getTime() + 3600000),
           },
         }),
@@ -462,8 +474,8 @@ describe('AIRecommendation Database Operations', () => {
             inputSongId: testSong1.id,
             recommendedSongId: testSong3.id,
             score: 0.75,
-            reason: 'Good match',
-            modelVersion: 'gpt-4',
+            reason: "Good match",
+            modelVersion: "gpt-4",
             cachedUntil: new Date(now.getTime() + 3600000),
           },
         }),
@@ -472,15 +484,15 @@ describe('AIRecommendation Database Operations', () => {
             inputSongId: testSong2.id,
             recommendedSongId: testSong1.id,
             score: 0.88,
-            reason: 'Very good match',
-            modelVersion: 'gpt-4',
+            reason: "Very good match",
+            modelVersion: "gpt-4",
             cachedUntil: new Date(now.getTime() - 1800000), // Expired 30min ago
           },
         }),
       ]);
     });
 
-    it('should get top recommendations for input song with cache check', async () => {
+    it("should get top recommendations for input song with cache check", async () => {
       const topRecs = await prisma.aIRecommendation.findMany({
         where: {
           inputSongId: testSong1.id,
@@ -504,21 +516,21 @@ describe('AIRecommendation Database Operations', () => {
           },
         },
         orderBy: {
-          score: 'desc',
+          score: "desc",
         },
         take: 5,
       });
 
       expect(topRecs).toHaveLength(2);
       expect(topRecs[0].score).toBe(0.95);
-      expect(topRecs[0].inputSong.title).toBe('Bohemian Rhapsody');
-      expect(topRecs[0].recommendedSong.title).toBe('Stairway to Heaven');
+      expect(topRecs[0].inputSong.title).toBe("Bohemian Rhapsody");
+      expect(topRecs[0].recommendedSong.title).toBe("Stairway to Heaven");
       expect(topRecs[1].score).toBe(0.75);
     });
 
-    it('should aggregate recommendations by model version', async () => {
+    it("should aggregate recommendations by model version", async () => {
       const aggregation = await prisma.aIRecommendation.groupBy({
-        by: ['modelVersion'],
+        by: ["modelVersion"],
         _count: {
           id: true,
         },
@@ -531,13 +543,13 @@ describe('AIRecommendation Database Operations', () => {
       });
 
       expect(aggregation).toHaveLength(1);
-      expect(aggregation[0].modelVersion).toBe('gpt-4');
+      expect(aggregation[0].modelVersion).toBe("gpt-4");
       expect(aggregation[0]._count.id).toBe(3);
       expect(aggregation[0]._avg.score).toBeCloseTo(0.86, 2);
       expect(aggregation[0]._max.generatedAt).toBeInstanceOf(Date);
     });
 
-    it('should find similar songs across all recommendations', async () => {
+    it("should find similar songs across all recommendations", async () => {
       const similarSongs = await prisma.aIRecommendation.findMany({
         where: {
           score: {
@@ -557,19 +569,19 @@ describe('AIRecommendation Database Operations', () => {
           },
         },
         orderBy: {
-          score: 'desc',
+          score: "desc",
         },
       });
 
       expect(similarSongs).toHaveLength(1);
       expect(similarSongs[0].score).toBe(0.95);
-      expect(similarSongs[0].recommendedSong.genre).toBe('rock');
+      expect(similarSongs[0].recommendedSong.genre).toBe("rock");
     });
   });
 
-  describe('Foreign Key Constraints', () => {
-    it('should enforce foreign key constraint for inputSongId', async () => {
-      const invalidSongId = '00000000-0000-0000-0000-000000000000';
+  describe("Foreign Key Constraints", () => {
+    it("should enforce foreign key constraint for inputSongId", async () => {
+      const invalidSongId = "00000000-0000-0000-0000-000000000000";
 
       await expect(
         prisma.aIRecommendation.create({
@@ -582,8 +594,8 @@ describe('AIRecommendation Database Operations', () => {
       ).rejects.toThrow();
     });
 
-    it('should enforce foreign key constraint for recommendedSongId', async () => {
-      const invalidSongId = '00000000-0000-0000-0000-000000000000';
+    it("should enforce foreign key constraint for recommendedSongId", async () => {
+      const invalidSongId = "00000000-0000-0000-0000-000000000000";
 
       await expect(
         prisma.aIRecommendation.create({
@@ -596,12 +608,12 @@ describe('AIRecommendation Database Operations', () => {
       ).rejects.toThrow();
     });
 
-    it('should cascade delete recommendations when input song is deleted', async () => {
+    it("should cascade delete recommendations when input song is deleted", async () => {
       // Create a temporary song and recommendation
       const tempSong = await prisma.song.create({
         data: {
-          title: 'Temporary Song',
-          artist: 'Temporary Artist',
+          title: "Temporary Song",
+          artist: "Temporary Artist",
         },
       });
 
@@ -629,19 +641,28 @@ describe('AIRecommendation Database Operations', () => {
     });
   });
 
-  describe('Performance and Indexing', () => {
+  describe("Performance and Indexing", () => {
     beforeEach(async () => {
       // Create multiple recommendations for performance testing
       const now = new Date();
-      const recommendations = [];
-      
+      const recommendations: Array<{
+        inputSongId: string;
+        recommendedSongId: string;
+        score: number;
+        modelVersion: string;
+        cachedUntil: Date;
+      }> = [];
+
       for (let i = 0; i < 50; i++) {
         recommendations.push({
           inputSongId: i % 2 === 0 ? testSong1.id : testSong2.id,
           recommendedSongId: testSong3.id,
           score: Math.random(),
-          modelVersion: i % 3 === 0 ? 'gpt-3.5-turbo' : 'gpt-4',
-          cachedUntil: i % 4 === 0 ? new Date(now.getTime() - 3600000) : new Date(now.getTime() + 3600000),
+          modelVersion: i % 3 === 0 ? "gpt-3.5-turbo" : "gpt-4",
+          cachedUntil:
+            i % 4 === 0
+              ? new Date(now.getTime() - 3600000)
+              : new Date(now.getTime() + 3600000),
         });
       }
 
@@ -650,15 +671,15 @@ describe('AIRecommendation Database Operations', () => {
       });
     });
 
-    it('should perform fast lookup by input song and score (indexed)', async () => {
+    it("should perform fast lookup by input song and score (indexed)", async () => {
       const startTime = Date.now();
-      
+
       const results = await prisma.aIRecommendation.findMany({
         where: {
           inputSongId: testSong1.id,
         },
         orderBy: {
-          score: 'desc',
+          score: "desc",
         },
         take: 10,
       });
@@ -670,9 +691,9 @@ describe('AIRecommendation Database Operations', () => {
       expect(queryTime).toBeLessThan(100); // Should be fast due to index
     });
 
-    it('should perform fast cleanup of expired cache entries (indexed)', async () => {
+    it("should perform fast cleanup of expired cache entries (indexed)", async () => {
       const startTime = Date.now();
-      
+
       const deleteResult = await prisma.aIRecommendation.deleteMany({
         where: {
           cachedUntil: {
@@ -688,12 +709,12 @@ describe('AIRecommendation Database Operations', () => {
       expect(queryTime).toBeLessThan(100); // Should be fast due to index
     });
 
-    it('should perform fast filtering by model version (indexed)', async () => {
+    it("should perform fast filtering by model version (indexed)", async () => {
       const startTime = Date.now();
-      
+
       const results = await prisma.aIRecommendation.findMany({
         where: {
-          modelVersion: 'gpt-4',
+          modelVersion: "gpt-4",
         },
         take: 20,
       });
@@ -706,8 +727,8 @@ describe('AIRecommendation Database Operations', () => {
     });
   });
 
-  describe('Data Validation', () => {
-    it('should validate score range (0.0-1.0)', async () => {
+  describe("Data Validation", () => {
+    it("should validate score range (0.0-1.0)", async () => {
       // Test valid scores
       const validRec = await prisma.aIRecommendation.create({
         data: {
@@ -723,7 +744,7 @@ describe('AIRecommendation Database Operations', () => {
       // but the database should enforce score constraints if defined in migration
     });
 
-    it('should handle null optional fields correctly', async () => {
+    it("should handle null optional fields correctly", async () => {
       const minimalRec = await prisma.aIRecommendation.create({
         data: {
           inputSongId: testSong1.id,
@@ -735,22 +756,22 @@ describe('AIRecommendation Database Operations', () => {
       expect(minimalRec.reason).toBeNull();
       expect(minimalRec.cachedUntil).toBeNull();
       expect(minimalRec.requestParameters).toBeNull();
-      expect(minimalRec.modelVersion).toBe('gpt-4'); // Default value
+      expect(minimalRec.modelVersion).toBe("gpt-4"); // Default value
       expect(minimalRec.generatedAt).toBeInstanceOf(Date);
     });
 
-    it('should handle complex JSON in requestParameters', async () => {
+    it("should handle complex JSON in requestParameters", async () => {
       const complexParams = {
         limit: 10,
         includeReason: true,
         filters: {
-          genre: ['rock', 'alternative'],
+          genre: ["rock", "alternative"],
           minPopularity: 70,
         },
         context: {
           userPreferences: {
-            energy: 'high',
-            mood: 'upbeat',
+            energy: "high",
+            mood: "upbeat",
           },
           timestamp: new Date().toISOString(),
         },
