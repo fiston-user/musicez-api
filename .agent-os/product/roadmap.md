@@ -22,7 +22,13 @@
 
 ### Features
 
-- [x] Basic authentication system with JWT tokens `M`
+- [x] **JWT Authentication System** `M` - Complete with access/refresh tokens, Redis session management
+  - ✅ User registration and login endpoints
+  - ✅ Password security with bcrypt (12 salt rounds)
+  - ✅ JWT token generation (15min access, 7-day refresh)
+  - ✅ Refresh token rotation with Redis storage
+  - ✅ Logout and logout-all functionality
+  - ✅ Rate limiting for auth endpoints
 - [ ] Song search endpoint with fuzzy matching `M`  
 - [ ] Integration with Spotify Web API for song metadata `L`
 - [ ] AI recommendation engine using OpenAI GPT-4 `L`

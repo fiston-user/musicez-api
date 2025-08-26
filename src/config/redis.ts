@@ -75,7 +75,15 @@ class RealRedis implements RedisClient {
   constructor(redisUrl: string) {
     this.client = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
-      lazyConnect: true,
+      retryStrategy: (times) => {
+        if (times > 3) {
+          console.error('❌ Redis connection failed after 3 retries');
+          return null; // Stop retrying
+        }
+        const delay = Math.min(times * 100, 2000);
+        console.log(`⏳ Retrying Redis connection in ${delay}ms...`);
+        return delay;
+      }
     });
 
     // Handle connection events
@@ -84,11 +92,15 @@ class RealRedis implements RedisClient {
     });
 
     this.client.on('error', (error) => {
-      console.error('❌ Redis connection error:', error);
+      console.error('❌ Redis connection error:', error.message);
     });
 
     this.client.on('close', () => {
       console.log('Redis connection closed');
+    });
+
+    this.client.on('ready', () => {
+      console.log('✅ Redis is ready to accept commands');
     });
   }
 
@@ -144,6 +156,24 @@ function createRedisClient(): RedisClient {
 
 // Export Redis client instance
 export const redis = createRedisClient();
+
+// Initialize Redis connection
+export async function initializeRedis(): Promise<void> {
+  // Skip initialization for mock Redis
+  if (config.app.isTest || !config.redis.url) {
+    return;
+  }
+  
+  try {
+    // Perform a simple operation to trigger connection
+    await redis.setex('init_check', 5, 'initializing');
+    await redis.del('init_check');
+    console.log('✅ Redis initialization complete');
+  } catch (error) {
+    console.error('❌ Failed to initialize Redis:', error);
+    throw error;
+  }
+}
 
 // Health check for Redis connection
 export async function checkRedisHealth() {
