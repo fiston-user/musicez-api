@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { Application } from 'express';
-import { createApp } from '../../src/app';
+import createApp from '../../src/app';
 import { PrismaClient } from '@prisma/client';
 
 describe('Health Check Endpoint', () => {

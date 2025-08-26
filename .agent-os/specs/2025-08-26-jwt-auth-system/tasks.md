@@ -7,13 +7,13 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
 
 ## Tasks
 
-- [ ] 1. **Database Schema and User Model Enhancement**
-  - [ ] 1.1 Write tests for updated User model with password, emailVerified, lastLoginAt fields
-  - [ ] 1.2 Create Prisma migration for new User fields (password, emailVerified, lastLoginAt)
-  - [ ] 1.3 Update User model in Prisma schema with new required fields and constraints
-  - [ ] 1.4 Run migration and verify database schema changes
-  - [ ] 1.5 Update existing User-related test fixtures and factories
-  - [ ] 1.6 Verify all database integration tests pass
+- [x] 1. **Database Schema and User Model Enhancement**
+  - [x] 1.1 Write tests for updated User model with password, emailVerified, lastLoginAt fields
+  - [x] 1.2 Create Prisma migration for new User fields (password, emailVerified, lastLoginAt)
+  - [x] 1.3 Update User model in Prisma schema with new required fields and constraints
+  - [x] 1.4 Run migration and verify database schema changes
+  - [x] 1.5 Update existing User-related test fixtures and factories
+  - [x] 1.6 Verify all database integration tests pass
 
 - [x] 2. **Password Security and Validation System**
   - [x] 2.1 Write tests for password hashing, validation, and comparison utilities
@@ -41,15 +41,15 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [x] 4.6 Add device tracking and metadata storage for security monitoring
   - [x] 4.7 Verify all Redis session management tests pass
 
-- [ ] 5. **Authentication API Endpoints Implementation**
-  - [ ] 5.1 Write comprehensive tests for all authentication endpoints (register, login, refresh, logout)
-  - [ ] 5.2 Create Zod validation schemas for authentication request/response data
-  - [ ] 5.3 Implement POST /auth/register endpoint with user creation and token generation
-  - [ ] 5.4 Implement POST /auth/login endpoint with credential verification
-  - [ ] 5.5 Implement POST /auth/refresh endpoint with token rotation
-  - [ ] 5.6 Implement POST /auth/logout and POST /auth/logout-all endpoints
-  - [ ] 5.7 Add enhanced rate limiting for authentication endpoints
-  - [ ] 5.8 Verify all authentication API endpoint tests pass
+- [x] 5. **Authentication API Endpoints Implementation**
+  - [x] 5.1 Write comprehensive tests for all authentication endpoints (register, login, refresh, logout)
+  - [x] 5.2 Create Zod validation schemas for authentication request/response data
+  - [x] 5.3 Implement POST /auth/register endpoint with user creation and token generation
+  - [x] 5.4 Implement POST /auth/login endpoint with credential verification
+  - [x] 5.5 Implement POST /auth/refresh endpoint with token rotation
+  - [x] 5.6 Implement POST /auth/logout and POST /auth/logout-all endpoints
+  - [x] 5.7 Add enhanced rate limiting for authentication endpoints
+  - [x] 5.8 Verify all authentication API endpoint tests pass
 
 - [ ] 6. **Dual Authentication Middleware Integration**
   - [ ] 6.1 Write tests for dual authentication middleware (JWT + API key support)
