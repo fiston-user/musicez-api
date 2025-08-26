@@ -2,6 +2,7 @@ import createApp from "./app";
 import { config } from "./config/environment";
 import { PrismaClient } from "@prisma/client";
 import { initializeRedis, disconnectRedis } from "./config/redis";
+import { SpotifySyncService } from "./services/spotify-sync.service";
 
 const prisma = new PrismaClient();
 const app = createApp();
@@ -36,6 +37,11 @@ const startServer = async () => {
   try {
     // Initialize Redis connection
     await initializeRedis();
+    
+    // Initialize and start Spotify sync service
+    const spotifySyncService = new SpotifySyncService(prisma);
+    await spotifySyncService.initializeScheduledJobs();
+    spotifySyncService.startScheduler();
     
     // Start server
     const server = app.listen(config.app.port, () => {
