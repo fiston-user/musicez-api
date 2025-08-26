@@ -48,7 +48,10 @@ model RequestLog {
 model User {
   id              String           @id @default(uuid())
   email           String?          @unique
+  password        String           @default("")
   name            String?
+  emailVerified   Boolean          @default(false)
+  lastLoginAt     DateTime?
   apiKeyId        String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt

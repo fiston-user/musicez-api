@@ -60,6 +60,7 @@ describe('Database Integration Tests', () => {
       const user = await prisma.user.create({
         data: {
           email: 'test@example.com',
+          password: '$2b$12$testHashedPassword123456789', // Required field after migration
           name: 'Test User',
           favoriteGenres: ['rock', 'jazz'],
         },
@@ -69,6 +70,8 @@ describe('Database Integration Tests', () => {
       expect(user.id).toBeDefined();
       expect(user.email).toBe('test@example.com');
       expect(user.favoriteGenres).toEqual(['rock', 'jazz']);
+      expect(user.password).toBeDefined();
+      expect(user.emailVerified).toBe(false); // Default value
     });
 
     it('should find user by email', async () => {
@@ -178,6 +181,7 @@ describe('Database Integration Tests', () => {
       const user = await prisma.user.create({
         data: {
           email: 'recommender@test.com',
+          password: '$2b$12$recommenderTestPassword1234',
           name: 'Recommender',
         },
       });
@@ -268,6 +272,7 @@ describe('Database Integration Tests', () => {
         const user = await tx.user.create({
           data: {
             email: 'transaction@test.com',
+            password: '$2b$12$transactionTestPassword123',
             name: 'Transaction User',
           },
         });
@@ -294,6 +299,7 @@ describe('Database Integration Tests', () => {
           await tx.user.create({
             data: {
               email: 'rollback@test.com',
+              password: '$2b$12$rollbackTestPassword123456',
               name: 'Rollback User',
             },
           });

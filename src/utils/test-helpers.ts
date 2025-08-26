@@ -44,7 +44,9 @@ export async function createTestUser(
   prisma: PrismaClient,
   data?: Partial<{
     email: string;
+    password: string;
     name: string;
+    emailVerified: boolean;
     favoriteGenres: string[];
   }>
 ): Promise<User> {
@@ -53,7 +55,9 @@ export async function createTestUser(
   return prisma.user.create({
     data: {
       email: data?.email ?? `test.user.${testCounter}.${Date.now()}@test.com`,
+      password: data?.password ?? `$2b$12$testHashedPassword${testCounter}123`,
       name: data?.name ?? `Test User ${testCounter}`,
+      emailVerified: data?.emailVerified ?? false,
       favoriteGenres: data?.favoriteGenres ?? ['rock', 'pop'],
     },
   });
@@ -206,4 +210,76 @@ export async function seedTestData(prisma: PrismaClient) {
   });
   
   return { users, songs, apiKeys };
+}
+
+/**
+ * Creates a test user specifically for authentication testing
+ */
+export async function createTestAuthUser(
+  prisma: PrismaClient,
+  data?: Partial<{
+    email: string;
+    password: string;
+    name: string;
+    emailVerified: boolean;
+  }>
+): Promise<User> {
+  testCounter++;
+  
+  return prisma.user.create({
+    data: {
+      email: data?.email ?? `auth.user.${testCounter}.${Date.now()}@test.com`,
+      password: data?.password ?? '$2b$12$hashedTestPassword123456789', // Standard bcrypt test hash
+      name: data?.name ?? `Auth Test User ${testCounter}`,
+      emailVerified: data?.emailVerified ?? false,
+      favoriteGenres: ['rock', 'pop'], // Default genres
+    },
+  });
+}
+
+/**
+ * Creates a test user with verified email status
+ */
+export async function createVerifiedTestUser(
+  prisma: PrismaClient,
+  data?: Partial<{
+    email: string;
+    password: string;
+    name: string;
+  }>
+): Promise<User> {
+  return createTestAuthUser(prisma, {
+    ...data,
+    emailVerified: true,
+  });
+}
+
+/**
+ * Updates user's last login timestamp
+ */
+export async function updateUserLastLogin(
+  prisma: PrismaClient,
+  userId: string,
+  loginTime?: Date
+): Promise<User> {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { lastLoginAt: loginTime ?? new Date() },
+  });
+}
+
+/**
+ * Simulates user login by updating lastLoginAt
+ */
+export async function simulateUserLogin(
+  prisma: PrismaClient,
+  email: string
+): Promise<User | null> {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+  
+  if (!user) return null;
+  
+  return updateUserLastLogin(prisma, user.id);
 }

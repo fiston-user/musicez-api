@@ -3,14 +3,14 @@
 ## Core Technologies
 
 ### Backend Framework
-- **Application Framework:** Express.js v4.21+ with TypeScript
-- **Runtime:** Node.js v20 LTS
-- **Language:** TypeScript v5.6+
+- **Application Framework:** Express.js v5.1.0 with TypeScript
+- **Runtime:** Node.js v20+ LTS
+- **Language:** TypeScript v5.9.2
 
 ### Database & ORM
-- **Database System:** PostgreSQL v16
-- **ORM:** Prisma v5.22
-- **Caching:** Redis (for session management and API response caching)
+- **Database System:** PostgreSQL v16-alpine
+- **ORM:** Prisma v6.14.0 with Prisma Client
+- **Caching:** Redis v7-alpine (containerized, ready for session/caching)
 
 ### API Architecture
 - **API Style:** RESTful with OpenAPI 3.0 documentation
@@ -25,10 +25,11 @@
 
 ### Development Tools
 - **Package Manager:** npm
-- **Build Tool:** tsx for development, tsc for production
-- **Testing:** Jest with Supertest for API testing
-- **Linting:** ESLint with TypeScript plugin
-- **Formatting:** Prettier
+- **Build Tool:** tsx v4.20.5 for development, tsc for production
+- **Testing:** Jest v30.0.5 with ts-jest v29.4.1, Supertest v7.1.4 for API testing
+- **Docker:** Docker Compose with multi-container setup (app, postgres, redis)
+- **Linting:** ESLint (configured, ready for use)
+- **Type Checking:** TypeScript strict mode with comprehensive compiler options
 
 ### Infrastructure & Deployment
 - **Application Hosting:** Railway or Render (containerized deployment)

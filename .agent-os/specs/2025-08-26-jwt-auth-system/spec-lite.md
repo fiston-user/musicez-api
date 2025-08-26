@@ -1,0 +1,3 @@
+# Spec Summary (Lite)
+
+Implement a secure JWT-based authentication system that supports both user registration/login and API key authentication for MusicEZ's music recommendation API. The system provides JWT access tokens (15min) and refresh tokens (7 days) with Redis-based session management for immediate revocation, while maintaining the privacy-first, stateless architecture and supporting both B2B integrations and consumer applications through dual authentication middleware.
