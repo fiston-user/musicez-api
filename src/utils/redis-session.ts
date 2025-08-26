@@ -119,7 +119,7 @@ export class SessionService {
   async createSession(userId: string, deviceInfo?: DeviceInfo): Promise<SessionData> {
     // Input validation
     if (!userId || typeof userId !== 'string' || userId.trim() === '') {
-      throw new Error('User ID is required');
+      throw new SessionValidationError('User ID is required');
     }
 
     // Check session limit for user
@@ -200,7 +200,7 @@ export class SessionService {
         const sessionData: SessionData = JSON.parse(sessionDataStr);
         return sessionData;
       } catch (parseError) {
-        throw new Error('Failed to parse session data');
+        return null; // Return null for corrupted data
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -210,7 +210,7 @@ export class SessionService {
           throw new Error(`Failed to retrieve session: ${error.message}`);
         }
       }
-      throw new Error(`Failed to retrieve session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to retrieve session: ${error instanceof Error ? error.message : 'Unknown error'}`); 
     }
   }
 
@@ -506,6 +506,27 @@ export class SecurityService {
         const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
         if (!ipPattern.test(deviceInfo.ipAddress)) {
           return true;
+        }
+      }
+
+      // Check for geographic anomalies in IP address
+      // Compare with existing sessions to detect location changes
+      if (deviceInfo.ipAddress) {
+        const existingSessions = await this.sessionService.getUserSessions(userId);
+        if (existingSessions.length > 0) {
+          const latestSession = existingSessions[0];
+          if (latestSession.deviceInfo?.ipAddress) {
+            const currentIP = deviceInfo.ipAddress;
+            const lastIP = latestSession.deviceInfo.ipAddress;
+            
+            // Simple heuristic: different network ranges suggest different locations
+            const currentNetwork = currentIP.split('.').slice(0, 2).join('.');
+            const lastNetwork = lastIP.split('.').slice(0, 2).join('.');
+            
+            if (currentNetwork !== lastNetwork && !currentIP.startsWith('127.') && !lastIP.startsWith('127.')) {
+              return true;
+            }
+          }
         }
       }
     }

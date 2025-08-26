@@ -9,6 +9,7 @@ import rateLimit from 'express-rate-limit';
 import { healthRouter } from './routes/health.routes';
 import { rootRouter } from './routes/root.routes';
 import authRouter from './routes/auth.routes';
+import songsRouter from './routes/songs.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -95,6 +96,7 @@ function createApp(): Application {
   app.use('/', rootRouter);
   app.use('/health', healthRouter);
   app.use(`${config.api.prefix}/${config.api.version}/auth`, authRouter);
+  app.use(`${config.api.prefix}/${config.api.version}/songs`, songsRouter);
 
   // 404 handler (must be after all routes)
   app.use(notFoundHandler);

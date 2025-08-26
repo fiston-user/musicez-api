@@ -355,11 +355,11 @@ router.post(
         ip: req.ip,
       });
 
-      return res.json(
-        apiResponse(true, {
-          message: "Logged out successfully",
-        })
-      );
+      return res.json({
+        success: true,
+        message: "Logged out successfully",
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       logger.error("Logout failed", {
         error: error instanceof Error ? error.message : "Unknown error",
@@ -416,12 +416,12 @@ router.post(
         ip: req.ip,
       });
 
-      return res.json(
-        apiResponse(true, {
-          message: "Logged out from all devices successfully",
-          tokensRevoked,
-        })
-      );
+      return res.json({
+        success: true,
+        message: "Logged out from all devices successfully",
+        tokensRevoked,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       logger.error("Logout all failed", {
         error: error instanceof Error ? error.message : "Unknown error",
