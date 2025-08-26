@@ -13,8 +13,8 @@ export const JobStatus = {
 } as const;
 
 export const JobType = {
-  PLAYLIST_SYNC: 'playlist_sync',
-  RECENT_TRACKS_SYNC: 'recent_tracks_sync',
+  PLAYLIST_SYNC: 'USER_PLAYLISTS_SYNC',
+  RECENT_TRACKS_SYNC: 'RECENTLY_PLAYED_SYNC',
 } as const;
 
 export type JobStatusType = (typeof JobStatus)[keyof typeof JobStatus];
