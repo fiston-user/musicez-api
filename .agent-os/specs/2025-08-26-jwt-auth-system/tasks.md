@@ -15,22 +15,22 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [ ] 1.5 Update existing User-related test fixtures and factories
   - [ ] 1.6 Verify all database integration tests pass
 
-- [ ] 2. **Password Security and Validation System**
-  - [ ] 2.1 Write tests for password hashing, validation, and comparison utilities
-  - [ ] 2.2 Install and configure bcrypt dependency (^5.1.0)
-  - [ ] 2.3 Implement password validation utility (complexity requirements)
-  - [ ] 2.4 Implement secure password hashing utility with bcrypt (12 salt rounds)
-  - [ ] 2.5 Create password comparison utility for login authentication
-  - [ ] 2.6 Verify all password security tests pass
+- [x] 2. **Password Security and Validation System**
+  - [x] 2.1 Write tests for password hashing, validation, and comparison utilities
+  - [x] 2.2 Install and configure bcrypt dependency (^5.1.0)
+  - [x] 2.3 Implement password validation utility (complexity requirements)
+  - [x] 2.4 Implement secure password hashing utility with bcrypt (12 salt rounds)
+  - [x] 2.5 Create password comparison utility for login authentication
+  - [x] 2.6 Verify all password security tests pass
 
-- [ ] 3. **JWT Token Management System**
-  - [ ] 3.1 Write tests for JWT token generation, validation, and expiration
-  - [ ] 3.2 Install and configure jsonwebtoken dependency (^9.0.0)
-  - [ ] 3.3 Implement JWT access token generation (15min expiry) with user claims
-  - [ ] 3.4 Implement JWT token validation middleware with signature verification
-  - [ ] 3.5 Create refresh token generation utility (UUID-based, 7-day expiry)
-  - [ ] 3.6 Implement token expiration and error handling logic
-  - [ ] 3.7 Verify all JWT token management tests pass
+- [x] 3. **JWT Token Management System**
+  - [x] 3.1 Write tests for JWT token generation, validation, and expiration
+  - [x] 3.2 Install and configure jsonwebtoken dependency (^9.0.0)
+  - [x] 3.3 Implement JWT access token generation (15min expiry) with user claims
+  - [x] 3.4 Implement JWT token validation middleware with signature verification
+  - [x] 3.5 Create refresh token generation utility (UUID-based, 7-day expiry)
+  - [x] 3.6 Implement token expiration and error handling logic
+  - [x] 3.7 Verify all JWT token management tests pass
 
 - [ ] 4. **Redis Session Management and Token Storage**
   - [ ] 4.1 Write tests for Redis refresh token storage, retrieval, and cleanup
