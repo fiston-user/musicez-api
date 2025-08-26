@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SystemHealth {
+  id        String   @id @default(uuid())
+  status    String   @default("healthy")
+  checkedAt DateTime @default(now())
+  version   String   @default("1.0.0")
+
+  @@map("system_health")
+}
+
+model ApiKey {
+  id              String           @id @default(uuid())
+  key             String           @unique
+  name            String
+  active          Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  lastUsed        DateTime?
+  recommendations Recommendation[]
+
+  @@index([key])
+  @@map("api_keys")
+}
+
+model RequestLog {
+  id         String   @id @default(uuid())
+  method     String
+  path       String
+  statusCode Int
+  duration   Int
+  ip         String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+  @@map("request_logs")
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String?          @unique
+  name            String?
+  apiKeyId        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  favoriteGenres  String[]
+  recommendations Recommendation[]
+  preferences     UserPreference[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Song {
+  id               String            @id @default(uuid())
+  spotifyId        String?           @unique
+  title            String
+  artist           String
+  album            String?
+  genre            String?
+  releaseYear      Int?
+  tempo            Float?
+  key              String?
+  energy           Float?
+  danceability     Float?
+  valence          Float?
+  acousticness     Float?
+  instrumentalness Float?
+  popularity       Int?
+  duration         Int?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  recommendations  Recommendation[]
+  recommendedSongs RecommendedSong[]
+  userPreferences  UserPreference[]
+
+  @@index([spotifyId])
+  @@index([artist])
+  @@index([title])
+  @@map("songs")
+}
+
+model Recommendation {
+  id               String            @id @default(uuid())
+  userId           String?
+  apiKeyId         String?
+  inputSongId      String
+  status           String            @default("pending")
+  createdAt        DateTime          @default(now())
+  completedAt      DateTime?
+  processingTime   Int?
+  apiKey           ApiKey?           @relation(fields: [apiKeyId], references: [id])
+  inputSong        Song              @relation(fields: [inputSongId], references: [id])
+  user             User?             @relation(fields: [userId], references: [id])
+  recommendedSongs RecommendedSong[]
+
+  @@index([userId])
+  @@index([apiKeyId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("recommendations")
+}
+
+model RecommendedSong {
+  id               String         @id @default(uuid())
+  recommendationId String
+  songId           String
+  score            Float
+  reason           String?
+  position         Int
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  song             Song           @relation(fields: [songId], references: [id])
+
+  @@unique([recommendationId, songId])
+  @@index([recommendationId])
+  @@map("recommended_songs")
+}
+
+model UserPreference {
+  id        String   @id @default(uuid())
+  userId    String
+  songId    String
+  rating    Int?
+  liked     Boolean?
+  skipped   Boolean  @default(false)
+  playCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  song      Song     @relation(fields: [songId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, songId])
+  @@index([userId])
+  @@map("user_preferences")
+}
