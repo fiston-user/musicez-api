@@ -6,6 +6,9 @@ export interface RedisClient {
   get(key: string): Promise<string | null>;
   del(key: string): Promise<number>;
   keys(pattern: string): Promise<string[]>;
+  exists(key: string): Promise<number>;
+  expire(key: string, ttl: number): Promise<number>;
+  ttl(key: string): Promise<number>;
   quit?(): Promise<void>;
 }
 
@@ -42,6 +45,26 @@ class MockRedis implements RedisClient {
     }
     return keys.filter(key => key === pattern);
   }
+
+  async exists(key: string): Promise<number> {
+    return this.data.has(key) ? 1 : 0;
+  }
+
+  async expire(key: string, ttl: number): Promise<number> {
+    if (this.data.has(key)) {
+      // Simulate expiration by removing key after TTL
+      setTimeout(() => {
+        this.data.delete(key);
+      }, ttl * 1000);
+      return 1;
+    }
+    return 0;
+  }
+
+  async ttl(key: string): Promise<number> {
+    // For mock implementation, return positive TTL if key exists, -2 if not exists
+    return this.data.has(key) ? 3600 : -2;
+  }
 }
 
 // Real Redis implementation (to be implemented when Redis is fully integrated)
@@ -62,6 +85,21 @@ class RealRedis implements RedisClient {
   }
 
   async keys(pattern: string): Promise<string[]> {
+    // TODO: Implement real Redis connection
+    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  }
+
+  async exists(key: string): Promise<number> {
+    // TODO: Implement real Redis connection
+    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  }
+
+  async expire(key: string, ttl: number): Promise<number> {
+    // TODO: Implement real Redis connection
+    throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
+  }
+
+  async ttl(key: string): Promise<number> {
     // TODO: Implement real Redis connection
     throw new Error('Real Redis implementation not yet available. Use REDIS_URL environment variable to configure.');
   }

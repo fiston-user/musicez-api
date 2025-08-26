@@ -32,14 +32,14 @@ These are the tasks to be completed for the spec detailed in @.agent-os/specs/20
   - [x] 3.6 Implement token expiration and error handling logic
   - [x] 3.7 Verify all JWT token management tests pass
 
-- [ ] 4. **Redis Session Management and Token Storage**
-  - [ ] 4.1 Write tests for Redis refresh token storage, retrieval, and cleanup
-  - [ ] 4.2 Configure Redis connection and session management utilities
-  - [ ] 4.3 Implement refresh token storage in Redis with structured key patterns
-  - [ ] 4.4 Create token revocation functionality for single and multi-device logout
-  - [ ] 4.5 Implement automatic cleanup service for expired tokens
-  - [ ] 4.6 Add device tracking and metadata storage for security monitoring
-  - [ ] 4.7 Verify all Redis session management tests pass
+- [x] 4. **Redis Session Management and Token Storage**
+  - [x] 4.1 Write tests for Redis refresh token storage, retrieval, and cleanup
+  - [x] 4.2 Configure Redis connection and session management utilities
+  - [x] 4.3 Implement refresh token storage in Redis with structured key patterns
+  - [x] 4.4 Create token revocation functionality for single and multi-device logout
+  - [x] 4.5 Implement automatic cleanup service for expired tokens
+  - [x] 4.6 Add device tracking and metadata storage for security monitoring
+  - [x] 4.7 Verify all Redis session management tests pass
 
 - [ ] 5. **Authentication API Endpoints Implementation**
   - [ ] 5.1 Write comprehensive tests for all authentication endpoints (register, login, refresh, logout)
