@@ -32,6 +32,13 @@ export const API_ENDPOINTS = {
   SPOTIFY_DISCONNECT: '/auth/spotify/disconnect',
 } as const;
 
+// Token Management Configuration
+export const TOKEN_CONFIG = {
+  REFRESH_THRESHOLD_MS: 5 * 60 * 1000, // 5 minutes before expiry
+  BACKGROUND_CHECK_INTERVAL: 60 * 1000, // Check every minute
+  MAX_REFRESH_RETRIES: 3,
+} as const;
+
 // App Configuration
 export const APP_CONFIG = {
   NAME: 'MusicEZ',

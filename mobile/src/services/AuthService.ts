@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { Config, API_ENDPOINTS } from '@/constants/config';
+import { Config, API_ENDPOINTS, TOKEN_CONFIG } from '@/constants/config';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -29,6 +29,7 @@ export class AuthService {
   private readonly REFRESH_TOKEN_KEY = 'musicez_refresh_token';
   private accessToken: string | null = null;
   private isRefreshing = false;
+  private backgroundRefreshTimer: NodeJS.Timeout | null = null;
   private failedQueue: Array<{
     resolve: (token: string) => void;
     reject: (error: any) => void;
@@ -46,6 +47,91 @@ export class AuthService {
 
     // Set up request/response interceptors for automatic token handling
     this.setupInterceptors();
+  }
+
+  /**
+   * Simple JWT token decoder (payload only, no signature verification)
+   * Used for checking token expiration locally
+   */
+  private decodeJWT(token: string): any {
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        throw new Error('Invalid JWT token format');
+      }
+      
+      const base64Url = tokenParts[1];
+      if (!base64Url) {
+        throw new Error('Invalid JWT token payload');
+      }
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.warn('Failed to decode JWT token:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if the current access token should be refreshed based on expiration threshold
+   */
+  private shouldRefreshToken(): boolean {
+    if (!this.accessToken || this.isRefreshing) {
+      return false;
+    }
+
+    const decoded = this.decodeJWT(this.accessToken);
+    if (!decoded?.exp) {
+      // If we can't decode expiration, assume we should refresh
+      return true;
+    }
+
+    const expirationTime = decoded.exp * 1000; // Convert to milliseconds
+    const currentTime = Date.now();
+    const timeUntilExpiry = expirationTime - currentTime;
+
+    // Refresh if token expires within the threshold (5 minutes)
+    return timeUntilExpiry <= TOKEN_CONFIG.REFRESH_THRESHOLD_MS;
+  }
+
+  /**
+   * Start background token refresh monitoring
+   */
+  private startBackgroundTokenRefresh(): void {
+    // Clear any existing timer
+    if (this.backgroundRefreshTimer) {
+      clearInterval(this.backgroundRefreshTimer);
+    }
+
+    // Check token expiration periodically
+    this.backgroundRefreshTimer = setInterval(async () => {
+      if (this.shouldRefreshToken()) {
+        try {
+          console.log('Background token refresh triggered - token approaching expiration');
+          await this.attemptTokenRefresh();
+        } catch (error) {
+          console.warn('Background token refresh failed:', error);
+          // Don't throw error for background refresh failures
+          // The normal request interceptor will handle it if needed
+        }
+      }
+    }, TOKEN_CONFIG.BACKGROUND_CHECK_INTERVAL);
+  }
+
+  /**
+   * Stop background token refresh monitoring
+   */
+  private stopBackgroundTokenRefresh(): void {
+    if (this.backgroundRefreshTimer) {
+      clearInterval(this.backgroundRefreshTimer);
+      this.backgroundRefreshTimer = null;
+    }
   }
 
   /**
@@ -137,6 +223,9 @@ export class AuthService {
       // Store new refresh token securely
       await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, response.data.tokens.refreshToken);
       
+      // Restart background token refresh monitoring with new token
+      this.startBackgroundTokenRefresh();
+      
       return this.accessToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -149,6 +238,7 @@ export class AuthService {
    */
   private async clearAuthData(): Promise<void> {
     this.accessToken = null;
+    this.stopBackgroundTokenRefresh();
     await SecureStore.deleteItemAsync(this.REFRESH_TOKEN_KEY).catch(() => {
       // Ignore errors if key doesn't exist
     });
@@ -159,6 +249,8 @@ export class AuthService {
    */
   public setAccessToken(token: string): void {
     this.accessToken = token;
+    // Start background token refresh monitoring when token is set
+    this.startBackgroundTokenRefresh();
   }
 
   /**
@@ -185,6 +277,9 @@ export class AuthService {
       const { accessToken, refreshToken } = response.data.data.tokens;
       this.accessToken = accessToken;
       await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, refreshToken);
+      
+      // Start background token refresh monitoring
+      this.startBackgroundTokenRefresh();
 
       return response.data;
     } catch (error) {
@@ -209,6 +304,9 @@ export class AuthService {
       const { accessToken, refreshToken } = response.data.data.tokens;
       this.accessToken = accessToken;
       await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, refreshToken);
+      
+      // Start background token refresh monitoring
+      this.startBackgroundTokenRefresh();
 
       return response.data;
     } catch (error) {
