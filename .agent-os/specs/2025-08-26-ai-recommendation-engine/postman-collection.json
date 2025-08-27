@@ -144,9 +144,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/songs/search?q=queen&limit=5&threshold=0.1&recommend=true",
+              "raw": "{{baseUrl}}/api/v1/songs/search/enhanced?q=queen&limit=5&threshold=0.1&recommend=true&fresh=false&enrich=false",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "songs", "search"],
+              "path": ["api", "v1", "songs", "search", "enhanced"],
               "query": [
                 {
                   "key": "q",
@@ -163,6 +163,15 @@
                 {
                   "key": "recommend",
                   "value": "true"
+                },
+                {
+                  "key": "fresh",
+                  "value": "false"
+                },
+                {
+                  "key": "enrich",
+                  "value": "false",
+                  "description": "Enable Spotify metadata enrichment"
                 }
               ]
             }
@@ -185,7 +194,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"songId\": \"{{songId}}\",\n  \"limit\": 10,\n  \"includeReason\": true,\n  \"fresh\": false\n}"
+              "raw": "{\n  \"songId\": \"{{songId}}\",\n  \"limit\": 10,\n  \"includeAnalysis\": true,\n  \"forceRefresh\": false\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/recommendations",
@@ -206,7 +215,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"songId\": \"{{songId}}\",\n  \"limit\": 5,\n  \"includeReason\": false,\n  \"fresh\": true\n}"
+              "raw": "{\n  \"songId\": \"{{songId}}\",\n  \"limit\": 5,\n  \"includeAnalysis\": false,\n  \"forceRefresh\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/recommendations",
@@ -227,7 +236,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"songIds\": [\"{{songId}}\"],\n  \"limit\": 5,\n  \"includeReason\": true\n}"
+              "raw": "{\n  \"songIds\": [\"{{songId}}\"],\n  \"limit\": 5,\n  \"includeAnalysis\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/recommendations/batch",
