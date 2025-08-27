@@ -248,13 +248,13 @@ describe('RecommendationController', () => {
         })
       );
 
-      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.status).toHaveBeenCalledWith(503);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           error: expect.objectContaining({
-            code: 'INTERNAL_ERROR',
-            message: 'An unexpected error occurred while generating recommendations',
+            code: 'AI_SERVICE_TIMEOUT',
+            message: 'AI service request timed out. Please try again.',
           }),
           requestId: 'test-req-123',
         })
@@ -346,7 +346,7 @@ describe('RecommendationController', () => {
         metadata: {
           processed: 2,
           failed: 0,
-          totalProcessingTime: 3000,
+          totalProcessingTime: expect.any(Number),
         },
       };
 

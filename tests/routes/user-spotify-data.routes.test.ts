@@ -4,14 +4,25 @@ import createApp from '../../src/app';
 import { prisma } from '../../src/database/prisma';
 import { redis } from '../../src/config/redis';
 import { SpotifyApiClient } from '../../src/utils/spotify-client';
-import { generateJwtTokens } from '../../src/utils/jwt-token';
-import { encryptSpotifyTokens } from '../../src/utils/spotify-token-encryption';
+import { generateAccessToken } from '../../src/utils/jwt-token';
+// Removed unused import
 
-jest.mock('../../src/database/prisma');
+// Mock prisma with manual implementation
+jest.mock('../../src/database/prisma', () => ({
+  prisma: {
+    user: {
+      findUnique: jest.fn(),
+    },
+    spotifySyncJob: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
+  },
+}));
 jest.mock('../../src/config/redis');
 jest.mock('../../src/utils/spotify-client');
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>;
+const mockPrisma = prisma as any;
 const mockRedis = redis as jest.Mocked<typeof redis>;
 
 describe('User Spotify Data Routes', () => {
@@ -24,8 +35,8 @@ describe('User Spotify Data Routes', () => {
     userId = 'test_user_123';
     
     // Generate test JWT token
-    const tokens = generateJwtTokens({ id: userId, email: 'test@example.com' });
-    accessToken = tokens.accessToken;
+    const tokenUser = { id: userId, email: 'test@example.com' };
+    accessToken = await generateAccessToken(tokenUser);
   });
 
   beforeEach(() => {
