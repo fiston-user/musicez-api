@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { SongSearchService } from '../utils/song-search-service';
+import { EnhancedSongSearchService } from '../utils/enhanced-search-service';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { 
   SearchResponse, 
@@ -19,13 +19,13 @@ import { OpenAIRecommendationService } from '../services/openai-recommendation.s
  * Search Controller - handles song search API requests
  */
 export class SearchController {
-  private searchService: SongSearchService;
+  private searchService: EnhancedSongSearchService;
   private recommendationService: OpenAIRecommendationService;
   private cachePrefix = 'search:';
   private cacheTTL = 300; // 5 minutes
 
   constructor() {
-    this.searchService = new SongSearchService();
+    this.searchService = new EnhancedSongSearchService();
     this.recommendationService = new OpenAIRecommendationService();
   }
 
@@ -230,42 +230,20 @@ export class SearchController {
         userAgent: req.get('User-Agent')
       });
 
-      // Generate cache key (include recommend parameter in cache key)
-      const cacheKey = this.generateEnhancedCacheKey(query, limit, threshold, recommend);
-      let results: SearchResultItem[] = [];
-      let cached = false;
+      // Use EnhancedSongSearchService with Spotify enrichment
+      let results: any[] = [];
       let aiRecommendations: SearchAiRecommendations = undefined;
       let aiProcessingTime = 0;
 
-      // Try to get results from cache (skip if fresh=true or in test environment)
-      if (!fresh && !config.app.isTest) {
-        try {
-          const cachedResult = await redis.get(cacheKey);
-          if (cachedResult) {
-            const parsedCache = JSON.parse(cachedResult);
-            results = parsedCache.results || [];
-            aiRecommendations = parsedCache.aiRecommendations;
-            cached = true;
-            
-            logger.debug('Enhanced search results retrieved from cache', {
-              query,
-              resultsCount: results.length,
-              hasAiRecommendations: !!aiRecommendations,
-              userId
-            });
-          }
-        } catch (cacheError) {
-          logger.warn('Enhanced search cache retrieval failed', {
-            error: cacheError instanceof Error ? cacheError.message : 'Unknown error',
-            cacheKey: cacheKey.substring(0, 50) + '...'
-          });
-          // Continue without cache
-        }
-      }
-
-      // If not cached, perform database search
-      if (!cached) {
-        results = await this.searchService.search(query, { limit, threshold });
+      try {
+        // Call the enhanced search service with Spotify enrichment
+        results = await this.searchService.searchWithSpotifyEnrichment(query, {
+          limit,
+          threshold,
+          enableSpotify: enrich,
+          fresh,
+          userId,
+        });
 
         // Generate AI recommendations if requested and we have search results
         if (recommend && results.length > 0 && userId) {
@@ -322,34 +300,21 @@ export class SearchController {
             // Continue without AI recommendations
           }
         }
-        
-        // Cache results if appropriate (skip in test environment)
-        if (!config.app.isTest && this.shouldCache(results)) {
-          try {
-            const cacheData = {
-              results,
-              aiRecommendations,
-            };
-            await redis.setex(cacheKey, this.cacheTTL, JSON.stringify(cacheData));
-            
-            logger.debug('Enhanced search results cached', {
-              query,
-              resultsCount: results.length,
-              hasAiRecommendations: !!aiRecommendations,
-              cacheTTL: this.cacheTTL
-            });
-          } catch (cacheError) {
-            logger.warn('Enhanced search cache storage failed', {
-              error: cacheError instanceof Error ? cacheError.message : 'Unknown error',
-              query,
-              resultsCount: results.length
-            });
-            // Continue without caching
-          }
-        }
+      } catch (searchError) {
+        // Enhanced search service handles its own caching and error recovery
+        logger.warn('Enhanced search service error, results may be partial', {
+          error: searchError instanceof Error ? searchError.message : 'Unknown error',
+          query,
+          userId,
+        });
+        // results will be empty or partial based on service's fallback logic
       }
 
       const totalProcessingTime = Date.now() - startTime;
+
+      // Count results by source
+      const localResults = results.filter((r: any) => r.source === 'local' || r.source === 'merged').length;
+      const spotifyResults = results.filter((r: any) => r.source === 'spotify').length;
 
       // Prepare response metadata
       const metadata: EnhancedSearchMetadata = {
@@ -358,22 +323,18 @@ export class SearchController {
         processingTime: totalProcessingTime,
         limit: limit,
         threshold: threshold,
-        spotifyEnabled: enrich || false, // For future Spotify integration
-        localResults: results.length,
-        spotifyResults: 0, // For future Spotify integration
+        spotifyEnabled: enrich || false,
+        localResults: localResults,
+        spotifyResults: spotifyResults,
         aiRecommendationsEnabled: recommend,
         aiProcessingTime: aiProcessingTime > 0 ? aiProcessingTime : undefined,
-        ...(cached && { cached: true })
       };
 
-      // Prepare response
+      // Prepare response - results already have source from enhanced service
       const response: EnhancedSearchResponse = {
         success: true,
         data: {
-          results: results.map(result => ({
-            ...result,
-            source: 'local' as const, // For future multi-source support
-          })),
+          results: results,
           metadata,
           aiRecommendations,
         },
@@ -387,7 +348,6 @@ export class SearchController {
         totalProcessingTime,
         aiProcessingTime: aiProcessingTime || 0,
         hasAiRecommendations: !!aiRecommendations,
-        cached,
         userId,
         ip: req.ip
       });
@@ -442,13 +402,6 @@ export class SearchController {
       });
     }
   };
-
-  /**
-   * Generate cache key for enhanced search query including AI recommendations
-   */
-  private generateEnhancedCacheKey(query: string, limit: number, threshold: number, recommend: boolean): string {
-    return `${this.cachePrefix}enhanced:${Buffer.from(`${query}:${limit}:${threshold}:${recommend}`).toString('base64')}`;
-  }
 
   /**
    * Get search suggestions (autocomplete)
