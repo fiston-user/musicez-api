@@ -794,4 +794,297 @@ try {
     // More specific error handling...
   }
 }
+
+## Mobile Authentication Anti-Patterns
+
+### ❌ Storing Access Tokens in Persistent Storage
+
+**Wrong Approach**:
+```typescript
+// DON'T store access tokens persistently
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+
+// ❌ NEVER DO THIS
+await AsyncStorage.setItem('access_token', accessToken);
+await SecureStore.setItemAsync('access_token', accessToken);
+
+export class AuthService {
+  async getAccessToken() {
+    return await SecureStore.getItemAsync('access_token'); // ❌ Wrong
+  }
+}
+```
+
+**Why It's Wrong**:
+- Access tokens should be short-lived and memory-only for security
+- Persistent access tokens create security vulnerabilities
+- Violates JWT security best practices
+- Increases attack surface for token theft
+
+**Correct Approach**:
+```typescript
+// ✅ CORRECT: Memory-only access tokens, persistent refresh tokens
+export class AuthService {
+  private accessToken: string | null = null; // Memory only
+  private readonly REFRESH_TOKEN_KEY = 'musicez_refresh_token';
+
+  async storeTokens(tokens: TokenPair) {
+    this.accessToken = tokens.accessToken; // Memory only
+    await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, tokens.refreshToken); // Secure storage
+  }
+
+  getAccessToken(): string | null {
+    return this.accessToken; // From memory
+  }
+}
+```
+
+### ❌ Missing Token Refresh Race Condition Handling
+
+**Wrong Approach**:
+```typescript
+// ❌ Multiple requests can trigger concurrent token refresh
+this.apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Multiple requests hitting this simultaneously
+      const newToken = await this.refreshAccessToken();
+      error.config.headers.Authorization = `Bearer ${newToken}`;
+      return this.apiClient(error.config);
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+**Why It's Wrong**:
+- Multiple concurrent requests can trigger multiple refresh calls
+- Race conditions can cause token refresh to fail
+- Can lead to authentication loops or failures
+- Poor user experience with inconsistent auth state
+
+**Correct Approach**:
+```typescript
+// ✅ CORRECT: Proper race condition handling with request queuing
+export class AuthService {
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (token: string) => void;
+    reject: (error: any) => void;
+  }> = [];
+
+  setupInterceptors() {
+    this.apiClient.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            // Queue this request while refresh is in progress
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            }).then((token) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return this.apiClient(originalRequest);
+            });
+          }
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          try {
+            const newToken = await this.attemptTokenRefresh();
+            this.processQueue(null, newToken);
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return this.apiClient(originalRequest);
+          } catch (refreshError) {
+            this.processQueue(refreshError, null);
+            this.clearAuthData();
+          } finally {
+            this.isRefreshing = false;
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
+}
+```
+
+### ❌ Incomplete Error Handling for Mobile Network Conditions
+
+**Wrong Approach**:
+```typescript
+// ❌ Generic error handling ignoring mobile-specific issues
+private handleApiError(error: any): ApiError {
+  return {
+    success: false,
+    error: {
+      code: 'API_ERROR',
+      message: 'Something went wrong'
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+```
+
+**Why It's Wrong**:
+- Doesn't handle mobile network conditions (poor connectivity, timeouts)
+- No distinction between different error types
+- Unhelpful error messages for mobile users
+- Missing context for debugging network issues
+
+**Correct Approach**:
+```typescript
+// ✅ CORRECT: Comprehensive mobile error handling
+private handleApiError(error: any): ApiError {
+  if (error.response?.data) {
+    return error.response.data as ApiError;
+  }
+
+  // Mobile-specific network error handling
+  if (error.code === 'ECONNABORTED') {
+    return {
+      success: false,
+      error: {
+        code: 'NETWORK_TIMEOUT',
+        message: 'Request timed out. Please check your connection and try again.',
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (error.code === 'NETWORK_ERROR' || !error.response) {
+    return {
+      success: false,
+      error: {
+        code: 'NETWORK_ERROR',
+        message: 'Unable to connect to the server. Please check your internet connection.',
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // Status code specific handling
+  const statusCode = error.response?.status || 500;
+  return {
+    success: false,
+    error: {
+      code: 'UNKNOWN_ERROR',
+      message: `An unexpected error occurred (${statusCode}). Please try again later.`,
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+```
+
+### ❌ Not Implementing Graceful Logout with Cleanup
+
+**Wrong Approach**:
+```typescript
+// ❌ Logout that can fail without cleaning local state
+public async logout(): Promise<void> {
+  const refreshToken = await SecureStore.getItemAsync(this.REFRESH_TOKEN_KEY);
+  
+  // This can throw and leave user in inconsistent state
+  await this.apiClient.post(API_ENDPOINTS.LOGOUT, { refreshToken });
+  
+  // Cleanup only happens if API call succeeds
+  this.accessToken = null;
+  await SecureStore.deleteItemAsync(this.REFRESH_TOKEN_KEY);
+}
+```
+
+**Why It's Wrong**:
+- API failure prevents local cleanup
+- User remains in authenticated state even after logout attempt
+- Poor user experience when network issues occur during logout
+- Inconsistent authentication state
+
+**Correct Approach**:
+```typescript
+// ✅ CORRECT: Guaranteed local cleanup regardless of API success
+public async logout(): Promise<void> {
+  try {
+    const refreshToken = await SecureStore.getItemAsync(this.REFRESH_TOKEN_KEY);
+    
+    if (refreshToken) {
+      const requestData: LogoutRequest = { refreshToken };
+      await this.apiClient.post(API_ENDPOINTS.LOGOUT, requestData);
+    }
+  } catch (error) {
+    // Log error but don't throw - we want to clear local data regardless
+    console.warn('Logout API call failed:', error);
+  } finally {
+    // ALWAYS clear local authentication data
+    await this.clearAuthData();
+  }
+}
+
+private async clearAuthData(): Promise<void> {
+  this.accessToken = null;
+  await SecureStore.deleteItemAsync(this.REFRESH_TOKEN_KEY).catch(() => {
+    // Ignore errors if key doesn't exist
+  });
+}
+```
+
+### ❌ Missing Mobile Configuration Management
+
+**Wrong Approach**:
+```typescript
+// ❌ Hardcoded configuration scattered throughout service
+export class AuthService {
+  constructor() {
+    this.apiClient = axios.create({
+      baseURL: 'http://localhost:3000/api/v1', // Hardcoded
+      timeout: 5000, // Hardcoded
+    });
+  }
+
+  async login() {
+    await this.apiClient.post('/auth/login'); // Hardcoded endpoint
+  }
+}
+```
+
+**Why It's Wrong**:
+- No environment-specific configuration
+- Hardcoded values difficult to change
+- No central configuration management
+- Poor separation of concerns
+
+**Correct Approach**:
+```typescript
+// ✅ CORRECT: Centralized mobile configuration
+// mobile/src/constants/config.ts
+export const Config = {
+  API_BASE_URL: Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:3000/api/v1',
+  API_TIMEOUT: 10000,
+  REFRESH_TOKEN_KEY: 'musicez_refresh_token',
+} as const;
+
+export const API_ENDPOINTS = {
+  LOGIN: '/auth/login',
+  LOGOUT: '/auth/logout',
+  REFRESH: '/auth/refresh',
+} as const;
+
+// AuthService uses centralized config
+export class AuthService {
+  constructor() {
+    this.apiClient = axios.create({
+      baseURL: Config.API_BASE_URL,
+      timeout: Config.API_TIMEOUT,
+    });
+  }
+
+  async login() {
+    await this.apiClient.post(API_ENDPOINTS.LOGIN);
+  }
+}
+```
 ```

@@ -731,4 +731,223 @@ logger.info('AI recommendation generation completed', {
 });
 ```
 
+## Mobile Authentication Service Patterns
+
+### Mobile API Service Architecture
+**Location**: `mobile/src/services/AuthService.ts`
+
+**Pattern**: Singleton service with secure token management
+```typescript
+// ✅ CORRECT: Singleton service pattern for mobile authentication
+export class AuthService {
+  private readonly apiClient: AxiosInstance;
+  private readonly REFRESH_TOKEN_KEY = 'musicez_refresh_token';
+  private accessToken: string | null = null;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (token: string) => void;
+    reject: (error: any) => void;
+  }> = [];
+
+  constructor() {
+    this.apiClient = axios.create({
+      baseURL: Config.API_BASE_URL,
+      timeout: Config.API_TIMEOUT,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    this.setupInterceptors();
+  }
+}
+
+// Export singleton instance
+export const authService = new AuthService();
+```
+
+### Mobile Token Security Pattern
+```typescript
+// ✅ CORRECT: Secure token storage architecture
+// Access tokens: Memory only (never persisted)
+private accessToken: string | null = null;
+
+// Refresh tokens: Secure storage only
+await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, refreshToken);
+await SecureStore.getItemAsync(this.REFRESH_TOKEN_KEY);
+
+// ❌ INCORRECT: Never store access tokens persistently
+// await SecureStore.setItemAsync('access_token', token); // DON'T DO THIS
+```
+
+### Axios Interceptor Pattern for Mobile
+```typescript
+// ✅ CORRECT: Request interceptor with automatic token attachment
+this.apiClient.interceptors.request.use(
+  async (config) => {
+    if (this.accessToken) {
+      config.headers.Authorization = `Bearer ${this.accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ✅ CORRECT: Response interceptor with token refresh and request queuing
+this.apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (this.isRefreshing) {
+        // Queue concurrent requests during refresh
+        return new Promise((resolve, reject) => {
+          this.failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return this.apiClient(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      this.isRefreshing = true;
+      // ... refresh logic
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+### Mobile Error Handling Pattern
+```typescript
+// ✅ CORRECT: Comprehensive mobile error handling
+private handleApiError(error: any): ApiError {
+  if (error.response?.data) {
+    return error.response.data as ApiError;
+  }
+
+  if (error.code === 'ECONNABORTED') {
+    return {
+      success: false,
+      error: {
+        code: 'NETWORK_TIMEOUT',
+        message: 'Request timed out. Please check your connection and try again.',
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (error.code === 'NETWORK_ERROR' || !error.response) {
+    return {
+      success: false,
+      error: {
+        code: 'NETWORK_ERROR',
+        message: 'Unable to connect to the server. Please check your internet connection.',
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+  
+  // Generic fallback with status code context
+  return {
+    success: false,
+    error: {
+      code: 'UNKNOWN_ERROR',
+      message: `An unexpected error occurred (${error.response?.status || 500}). Please try again later.`,
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+```
+
+### Mobile Configuration Pattern
+**Location**: `mobile/src/constants/config.ts`
+```typescript
+// ✅ CORRECT: Centralized mobile configuration
+export const Config = {
+  API_BASE_URL: Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:3000/api/v1',
+  API_TIMEOUT: 10000,
+  TOKEN_STORAGE_KEY: 'musicez_auth_token',
+  REFRESH_TOKEN_STORAGE_KEY: 'musicez_refresh_token',
+  USER_STORAGE_KEY: 'musicez_user_data',
+} as const;
+
+export const API_ENDPOINTS = {
+  REGISTER: '/auth/register',
+  LOGIN: '/auth/login',
+  REFRESH: '/auth/refresh',
+  LOGOUT: '/auth/logout',
+} as const;
+```
+
+### Mobile TypeScript Interface Pattern
+**Location**: `mobile/src/types/auth.ts`
+```typescript
+// ✅ CORRECT: Complete interface definitions matching backend API
+export interface AuthResponse {
+  success: true;
+  data: {
+    user: User;
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      tokenType: string;
+    };
+  };
+  timestamp: string;
+}
+
+export interface ApiError {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    field?: string;
+  };
+  timestamp: string;
+}
+```
+
+### Mobile Service Method Pattern
+```typescript
+// ✅ CORRECT: Consistent method structure with proper error handling
+public async loginUser(credentials: LoginRequest): Promise<AuthResponse> {
+  try {
+    const response: AxiosResponse<AuthResponse> = await this.apiClient.post(
+      API_ENDPOINTS.LOGIN,
+      credentials
+    );
+
+    // Store tokens after successful login
+    const { accessToken, refreshToken } = response.data.data.tokens;
+    this.accessToken = accessToken;
+    await SecureStore.setItemAsync(this.REFRESH_TOKEN_KEY, refreshToken);
+
+    return response.data;
+  } catch (error) {
+    throw this.handleApiError(error);
+  }
+}
+```
+
+### Mobile Authentication Flow Pattern
+```typescript
+// ✅ CORRECT: Graceful logout with guaranteed cleanup
+public async logout(): Promise<void> {
+  try {
+    const refreshToken = await SecureStore.getItemAsync(this.REFRESH_TOKEN_KEY);
+    
+    if (refreshToken) {
+      const requestData: LogoutRequest = { refreshToken };
+      await this.apiClient.post(API_ENDPOINTS.LOGOUT, requestData);
+    }
+  } catch (error) {
+    // Log error but don't throw - we want to clear local data regardless
+    console.warn('Logout API call failed:', error);
+  } finally {
+    // Always clear local authentication data
+    await this.clearAuthData();
+  }
+}
+```
+
 These patterns ensure consistency, maintainability, and adherence to the established architecture of the MusicEZ project.
