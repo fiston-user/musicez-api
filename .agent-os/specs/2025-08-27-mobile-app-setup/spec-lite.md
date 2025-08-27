@@ -1,0 +1,3 @@
+# Spec Summary (Lite)
+
+Initialize and configure a React Native mobile application using Expo that will serve as the client interface for the musicez AI-powered music recommendation API. This foundational setup will establish the development environment, core navigation, authentication infrastructure, and API integration patterns needed for subsequent feature development. The deliverable will be a functional cross-platform mobile app with working authentication flow and tab-based navigation structure ready for future music search and recommendation features.

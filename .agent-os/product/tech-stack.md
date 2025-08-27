@@ -49,8 +49,18 @@
 - **Code Documentation:** TypeDoc for TypeScript documentation
 - **SDK Generation:** OpenAPI Generator for client SDKs
 
-### Future Considerations (Frontend)
-- **JavaScript Framework:** React or Next.js (to be added later)
+### Mobile Client (React Native)
+- **Mobile Framework:** React Native with Expo v50+
+- **Development Tool:** Expo CLI and Expo Dev Build
+- **Navigation:** React Navigation v6
+- **State Management:** Zustand for lightweight state management
+- **HTTP Client:** Axios with interceptors for API integration
+- **UI Components:** Expo UI Kit / React Native Elements
+- **Authentication:** Expo SecureStore for JWT token storage
+- **Platform Support:** iOS and Android native builds
+
+### Future Web Frontend Considerations
+- **JavaScript Framework:** React or Next.js (web dashboard)
 - **CSS Framework:** Tailwind CSS
 - **UI Component Library:** shadcn/ui or Material-UI
 - **State Management:** Zustand or Redux Toolkit
