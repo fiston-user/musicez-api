@@ -43,6 +43,12 @@ const envSchema = z.object({
   SPOTIFY_CLIENT_SECRET: z.string().optional(),
   SPOTIFY_REDIRECT_URI: z.string().optional(),
   SPOTIFY_ENCRYPTION_KEY: z.string().optional(),
+  
+  // OpenAI API
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('gpt-4'),
+  OPENAI_MAX_TOKENS: z.string().default('1000').transform(Number),
+  OPENAI_TEMPERATURE: z.string().default('0.3').transform(Number),
 });
 
 // Parse and validate environment variables
@@ -107,6 +113,13 @@ export const config = {
     clientSecret: env.SPOTIFY_CLIENT_SECRET,
     redirectUri: env.SPOTIFY_REDIRECT_URI || `http://localhost:${env.PORT}/api/${env.API_VERSION}/auth/spotify/callback`,
     encryptionKey: env.SPOTIFY_ENCRYPTION_KEY || 'default-dev-encryption-key-32b',
+  },
+  
+  openai: {
+    apiKey: env.OPENAI_API_KEY || 'default-dev-api-key',
+    model: env.OPENAI_MODEL,
+    maxTokens: env.OPENAI_MAX_TOKENS,
+    temperature: env.OPENAI_TEMPERATURE,
   },
 };
 

@@ -101,6 +101,10 @@ model Song {
   recommendations  Recommendation[]
   recommendedSongs RecommendedSong[]
   userPreferences  UserPreference[]
+  
+  // AI Recommendation relations
+  inputForRecommendations      AIRecommendation[] @relation("InputSong")
+  appearsInRecommendations     AIRecommendation[] @relation("RecommendedSong")
 
   @@index([spotifyId])
   @@index([artist])
@@ -201,4 +205,25 @@ model SpotifySyncJob {
   @@index([jobType, status], map: "idx_spotify_jobs_type")
   @@index([userId], map: "idx_spotify_jobs_user_id")
   @@map("spotify_sync_jobs")
+}
+
+model AIRecommendation {
+  id                 String   @id @default(uuid())
+  inputSongId        String
+  recommendedSongId  String  
+  score              Float
+  reason             String?
+  modelVersion       String   @default("gpt-4")
+  generatedAt        DateTime @default(now())
+  cachedUntil        DateTime?
+  requestParameters  Json?
+  
+  inputSong          Song     @relation("InputSong", fields: [inputSongId], references: [id], onDelete: Cascade)
+  recommendedSong    Song     @relation("RecommendedSong", fields: [recommendedSongId], references: [id], onDelete: Cascade)
+
+  @@index([inputSongId, score(sort: Desc)], name: "idx_ai_recommendation_input_song_score")
+  @@index([cachedUntil], name: "idx_ai_recommendation_cached_until") 
+  @@index([modelVersion], name: "idx_ai_recommendation_model_version")
+  @@index([generatedAt], name: "idx_ai_recommendation_generated_at")
+  @@map("ai_recommendations")
 }

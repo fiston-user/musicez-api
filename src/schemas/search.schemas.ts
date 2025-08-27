@@ -71,6 +71,22 @@ export const searchFreshSchema = z
   });
 
 /**
+ * AI recommendation enable validation schema
+ */
+export const searchRecommendSchema = z
+  .union([z.string(), z.boolean()])
+  .optional()
+  .transform((val) => {
+    if (val === undefined) return false;
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const lower = val.toLowerCase();
+      return lower === 'true' || lower === '1' || lower === 'yes';
+    }
+    return false;
+  });
+
+/**
  * Complete search request query parameters schema
  */
 export const searchRequestSchema = z.object({
@@ -87,7 +103,8 @@ export const enhancedSearchRequestSchema = z.object({
   limit: searchLimitSchema,
   threshold: searchThresholdSchema,
   enrich: searchEnableSpotifySchema,
-  fresh: searchFreshSchema
+  fresh: searchFreshSchema,
+  recommend: searchRecommendSchema
 });
 
 /**
@@ -178,6 +195,84 @@ export const validateSearchQuery = (
 };
 
 /**
+ * Middleware to validate enhanced search query parameters with AI recommendations
+ */
+export const validateEnhancedSearchQuery = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  try {
+    const validatedQuery = enhancedSearchRequestSchema.parse(req.query);
+    (req as any).validatedQuery = validatedQuery;
+    next();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const firstError = error.issues[0];
+      const fieldName = firstError.path[0] as string;
+      
+      // Map field names to user-friendly names
+      const fieldMap: Record<string, string> = {
+        q: 'query',
+        limit: 'limit',
+        threshold: 'threshold',
+        enrich: 'enrich',
+        fresh: 'fresh',
+        recommend: 'recommend'
+      };
+      
+      const friendlyFieldName = fieldMap[fieldName] || fieldName;
+      
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: firstError.message,
+          field: friendlyFieldName,
+          details: error.issues.map(err => ({
+            field: fieldMap[err.path[0] as string] || err.path[0],
+            message: err.message,
+            value: (err as any).received
+          }))
+        },
+        timestamp: new Date().toISOString()
+      });
+    } else if (error instanceof Error) {
+      // Handle custom transform errors
+      const errorMessage = error.message;
+      let field = 'query';
+      
+      if (errorMessage.includes('Limit')) {
+        field = 'limit';
+      } else if (errorMessage.includes('Threshold')) {
+        field = 'threshold';
+      } else if (errorMessage.includes('recommend')) {
+        field = 'recommend';
+      }
+      
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: errorMessage,
+          field: field
+        },
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid request parameters'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+};
+
+/**
  * Audio features schema for enhanced search results
  */
 export const audioFeaturesSchema = z.object({
@@ -216,6 +311,27 @@ export const enhancedSearchResultItemSchema = searchResultItemSchema.extend({
 });
 
 /**
+ * AI recommendation item schema for search results
+ */
+export const aiRecommendationItemSchema = z.object({
+  song: searchResultItemSchema,
+  score: z.number().min(0).max(1),
+  reason: z.string().optional(),
+});
+
+/**
+ * AI recommendations response schema for search
+ */
+export const searchAiRecommendationsSchema = z.object({
+  basedOnSongId: z.string(),
+  basedOnSongTitle: z.string(),
+  basedOnSongArtist: z.string(),
+  recommendations: z.array(aiRecommendationItemSchema),
+  processingTime: z.number().min(0),
+  tokensUsed: z.number().optional(),
+}).optional();
+
+/**
  * Search response metadata schema
  */
 export const searchMetadataSchema = z.object({
@@ -234,6 +350,8 @@ export const enhancedSearchMetadataSchema = searchMetadataSchema.extend({
   spotifyEnabled: z.boolean(),
   localResults: z.number().min(0),
   spotifyResults: z.number().min(0),
+  aiRecommendationsEnabled: z.boolean().optional(),
+  aiProcessingTime: z.number().min(0).optional(),
 });
 
 /**
@@ -255,7 +373,8 @@ export const enhancedSearchResponseSchema = z.object({
   success: z.literal(true),
   data: z.object({
     results: z.array(enhancedSearchResultItemSchema),
-    metadata: enhancedSearchMetadataSchema
+    metadata: enhancedSearchMetadataSchema,
+    aiRecommendations: searchAiRecommendationsSchema
   }),
   timestamp: z.string()
 });
@@ -283,6 +402,8 @@ export const errorResponseSchema = z.object({
  */
 export type SearchResultItem = z.infer<typeof searchResultItemSchema>;
 export type EnhancedSearchResultItem = z.infer<typeof enhancedSearchResultItemSchema>;
+export type AiRecommendationItem = z.infer<typeof aiRecommendationItemSchema>;
+export type SearchAiRecommendations = z.infer<typeof searchAiRecommendationsSchema>;
 export type SearchMetadata = z.infer<typeof searchMetadataSchema>;
 export type EnhancedSearchMetadata = z.infer<typeof enhancedSearchMetadataSchema>;
 export type SearchResponse = z.infer<typeof searchResponseSchema>;

@@ -550,4 +550,185 @@ logger.info('Operation completed', {
 });
 ```
 
+## External API Service Patterns
+
+### OpenAI Integration Pattern
+**Location**: `src/services/openai-recommendation.service.ts`
+
+**Service Architecture**:
+```typescript
+// ✅ CORRECT: Use centralized database client
+import { prisma } from '../database/prisma';
+import { config } from '../config/environment';
+import logger from '../utils/logger';
+import { redis } from '../config/redis';
+
+export class OpenAIRecommendationService {
+  private readonly openaiClient: OpenAI;
+  private readonly cacheKeyPrefix = 'ai_rec';
+  private readonly cacheTTL = 3600; // 1 hour
+
+  constructor() {
+    this.openaiClient = new OpenAI({
+      apiKey: config.openai.apiKey,
+      timeout: 5000, // 5 second timeout
+    });
+  }
+
+  // Use prisma singleton directly, not through dependency injection
+  public async generateRecommendations(songId: string): Promise<GenerateRecommendationsResponse> {
+    const inputSong = await prisma.song.findUnique({
+      where: { id: songId },
+      select: {
+        // ... song fields
+      },
+    });
+    
+    // Continue with service logic...
+  }
+}
+```
+
+**Error Handling Pattern**:
+```typescript
+// ✅ Custom error classes with proper inheritance
+export class OpenAIRecommendationError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public cause?: Error
+  ) {
+    super(message);
+    this.name = 'OpenAIRecommendationError';
+  }
+}
+
+// ✅ Comprehensive error categorization
+try {
+  const response = await this.openaiClient.chat.completions.create({...});
+} catch (error) {
+  if (error instanceof Error) {
+    if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+      throw new OpenAIRecommendationError('OpenAI API request timeout', 408, error);
+    }
+    
+    if ('status' in error && (error as any).status === 429) {
+      throw new OpenAIRecommendationError('OpenAI API rate limit exceeded', 429, error);
+    }
+    
+    if ('status' in error && (error as any).status >= 500) {
+      throw new OpenAIRecommendationError('OpenAI API server error', 503, error);
+    }
+  }
+}
+```
+
+**Caching Pattern**:
+```typescript
+// ✅ Parameter-based cache key generation with hashing
+private generateCacheKey(songId: string, params: RecommendationParams): string {
+  const paramString = JSON.stringify({
+    limit: params.limit || 10,
+    includeAnalysis: params.includeAnalysis || false,
+  });
+  const paramHash = crypto.createHash('md5').update(paramString).digest('hex').substring(0, 8);
+  return `${this.cacheKeyPrefix}:${songId}:${paramHash}`;
+}
+
+// ✅ Cache-first pattern with fallback
+if (!forceRefresh && !config.app.isTest) {
+  const cachedResult = await this.getCachedRecommendations(songId, params);
+  if (cachedResult) {
+    return cachedResult;
+  }
+}
+```
+
+**Response Validation Pattern**:
+```typescript
+// ✅ Robust JSON parsing with validation
+private parseRecommendationResponse(content: string, songId: string): { recommendations: AIRecommendation[] } {
+  try {
+    const parsed = JSON.parse(content);
+    
+    if (!parsed.recommendations || !Array.isArray(parsed.recommendations)) {
+      throw new Error('Missing or invalid recommendations array');
+    }
+    
+    // Validate each recommendation structure
+    for (const rec of parsed.recommendations) {
+      if (!rec.title || !rec.artist || typeof rec.score !== 'number') {
+        throw new Error('Invalid recommendation structure');
+      }
+      
+      // Ensure score is within valid range
+      if (rec.score < 0 || rec.score > 1) {
+        rec.score = Math.max(0, Math.min(1, rec.score));
+      }
+    }
+    
+    return parsed;
+  } catch (error) {
+    logger.error('Failed to parse OpenAI recommendation response', {
+      songId,
+      response: content,
+      error: error instanceof Error ? error.message : 'Unknown parsing error',
+    });
+    throw new OpenAIRecommendationError('Invalid OpenAI response format', 502);
+  }
+}
+```
+
+## Service Testing Patterns
+
+### External API Service Testing
+```typescript
+// ✅ CORRECT: Mock external dependencies at module level
+const mockOpenAI = {
+  chat: {
+    completions: {
+      create: jest.fn(),
+    },
+  },
+};
+
+jest.mock('openai', () => {
+  return jest.fn().mockImplementation(() => mockOpenAI);
+});
+
+// ✅ Mock centralized services properly
+jest.mock('../../src/database/prisma', () => ({
+  prisma: {
+    song: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+    },
+    aIRecommendation: {
+      createMany: jest.fn(),
+    },
+  },
+}));
+
+// ✅ Simple service instantiation matching production
+beforeEach(() => {
+  service = new OpenAIRecommendationService(); // Same as production
+  jest.clearAllMocks();
+});
+```
+
+**Performance and Timing Patterns**:
+```typescript
+// ✅ Processing time tracking for monitoring
+const startTime = Date.now();
+// ... operation ...
+const processingTimeMs = Date.now() - startTime;
+
+logger.info('AI recommendation generation completed', {
+  songId,
+  totalRecommendations: matchedRecommendations.length,
+  processingTimeMs,
+  tokensUsed: response.usage?.total_tokens,
+});
+```
+
 These patterns ensure consistency, maintainability, and adherence to the established architecture of the MusicEZ project.

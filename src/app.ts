@@ -14,6 +14,7 @@ import apiKeyRouter from './routes/api-key.routes';
 import spotifyAuthRouter from './routes/spotify-auth.routes';
 import userSpotifyDataRouter from './routes/user-spotify-data.routes';
 import adminSpotifySyncRouter from './routes/admin-spotify-sync.routes';
+import recommendationsRouter from './routes/recommendations.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -105,6 +106,7 @@ function createApp(): Application {
   app.use(`${config.api.prefix}/${config.api.version}/admin/api-keys`, apiKeyRouter);
   app.use(`${config.api.prefix}/${config.api.version}/user/spotify`, userSpotifyDataRouter);
   app.use(`${config.api.prefix}/${config.api.version}/admin/spotify`, adminSpotifySyncRouter);
+  app.use(`${config.api.prefix}/${config.api.version}/recommendations`, recommendationsRouter);
 
   // 404 handler (must be after all routes)
   app.use(notFoundHandler);

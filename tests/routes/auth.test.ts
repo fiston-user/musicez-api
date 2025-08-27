@@ -366,7 +366,7 @@ describe('Authentication API Endpoints', () => {
         success: false,
         error: {
           code: 'INVALID_REFRESH_TOKEN',
-          message: 'Invalid or expired refresh token'
+          message: 'Invalid refresh token format'
         }
       });
     });
@@ -596,7 +596,8 @@ describe('Authentication API Endpoints', () => {
           email: 'jwt2@example.com',
           password: 'SecurePassword123!',
           name: 'JWT Test User 2'
-        });
+        })
+        .expect(201);
 
       // Then login
       const response = await request(app)

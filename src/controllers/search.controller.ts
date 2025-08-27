@@ -1,21 +1,32 @@
 import { Response, NextFunction } from 'express';
-import { SongSearchService } from '../utils/song-search-service';
+import { EnhancedSongSearchService } from '../utils/enhanced-search-service';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
-import { SearchResponse, SearchResultItem, SearchMetadata } from '../schemas/search.schemas';
+import { 
+  SearchResponse, 
+  SearchResultItem, 
+  SearchMetadata,
+  EnhancedSearchResponse,
+  EnhancedSearchMetadata,
+  SearchAiRecommendations,
+  AiRecommendationItem 
+} from '../schemas/search.schemas';
 import { redis } from '../config/redis';
 import { config } from '../config/environment';
 import logger from '../utils/logger';
+import { OpenAIRecommendationService } from '../services/openai-recommendation.service';
 
 /**
  * Search Controller - handles song search API requests
  */
 export class SearchController {
-  private searchService: SongSearchService;
+  private searchService: EnhancedSongSearchService;
+  private recommendationService: OpenAIRecommendationService;
   private cachePrefix = 'search:';
   private cacheTTL = 300; // 5 minutes
 
   constructor() {
-    this.searchService = new SongSearchService();
+    this.searchService = new EnhancedSongSearchService();
+    this.recommendationService = new OpenAIRecommendationService();
   }
 
   /**
@@ -187,6 +198,205 @@ export class SearchController {
         error: {
           code: 'SEARCH_FAILED',
           message: 'Search operation failed. Please try again later.'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  /**
+   * Enhanced search for songs with optional AI recommendations
+   */
+  public enhancedSearchSongs = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    const startTime = Date.now();
+    
+    try {
+      const { q: query, limit, threshold, enrich, fresh, recommend } = (req as any).validatedQuery;
+      const userId = req.user?.id;
+
+      logger.info('Enhanced song search initiated', {
+        query,
+        limit,
+        threshold,
+        enrich,
+        fresh,
+        recommend,
+        userId,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      // Use EnhancedSongSearchService with Spotify enrichment
+      let results: any[] = [];
+      let aiRecommendations: SearchAiRecommendations = undefined;
+      let aiProcessingTime = 0;
+
+      try {
+        // Call the enhanced search service with Spotify enrichment
+        results = await this.searchService.searchWithSpotifyEnrichment(query, {
+          limit,
+          threshold,
+          enableSpotify: enrich,
+          fresh,
+          userId,
+        });
+
+        // Generate AI recommendations if requested and we have search results
+        if (recommend && results.length > 0 && userId) {
+          const aiStartTime = Date.now();
+          try {
+            // Use the top search result for AI recommendations
+            const topResult = results[0];
+            const aiResult = await this.recommendationService.generateRecommendations(
+              topResult.id,
+              { limit: Math.min(5, limit), includeAnalysis: false }
+            );
+            
+            aiProcessingTime = Date.now() - aiStartTime;
+            
+            aiRecommendations = {
+              basedOnSongId: topResult.id,
+              basedOnSongTitle: topResult.title,
+              basedOnSongArtist: topResult.artist,
+              recommendations: aiResult.recommendations.map(rec => ({
+                song: {
+                  id: rec.song.id,
+                  title: rec.song.title,
+                  artist: rec.song.artist,
+                  album: rec.song.album,
+                  duration: rec.song.duration || null,
+                  releaseYear: rec.song.releaseYear || null,
+                  popularity: rec.song.popularity || null,
+                  similarity: rec.score, // Use AI score as similarity
+                  previewUrl: rec.song.previewUrl || null,
+                },
+                score: rec.score,
+                reason: rec.reason,
+              } as AiRecommendationItem)),
+              processingTime: aiProcessingTime,
+              tokensUsed: aiResult.metadata.tokensUsed,
+            };
+
+            logger.info('AI recommendations generated for search', {
+              basedOnSong: `${topResult.title} - ${topResult.artist}`,
+              recommendationsCount: aiRecommendations.recommendations.length,
+              aiProcessingTime,
+              tokensUsed: aiResult.metadata.tokensUsed,
+              userId,
+            });
+          } catch (aiError) {
+            aiProcessingTime = Date.now() - aiStartTime;
+            logger.warn('AI recommendations failed for search', {
+              error: aiError instanceof Error ? aiError.message : 'Unknown AI error',
+              query,
+              topResultId: results[0]?.id,
+              aiProcessingTime,
+              userId,
+            });
+            // Continue without AI recommendations
+          }
+        }
+      } catch (searchError) {
+        // Enhanced search service handles its own caching and error recovery
+        logger.warn('Enhanced search service error, results may be partial', {
+          error: searchError instanceof Error ? searchError.message : 'Unknown error',
+          query,
+          userId,
+        });
+        // results will be empty or partial based on service's fallback logic
+      }
+
+      const totalProcessingTime = Date.now() - startTime;
+
+      // Count results by source
+      const localResults = results.filter((r: any) => r.source === 'local' || r.source === 'merged').length;
+      const spotifyResults = results.filter((r: any) => r.source === 'spotify').length;
+
+      // Prepare response metadata
+      const metadata: EnhancedSearchMetadata = {
+        total: results.length,
+        query: query,
+        processingTime: totalProcessingTime,
+        limit: limit,
+        threshold: threshold,
+        spotifyEnabled: enrich || false,
+        localResults: localResults,
+        spotifyResults: spotifyResults,
+        aiRecommendationsEnabled: recommend,
+        aiProcessingTime: aiProcessingTime > 0 ? aiProcessingTime : undefined,
+      };
+
+      // Prepare response - results already have source from enhanced service
+      const response: EnhancedSearchResponse = {
+        success: true,
+        data: {
+          results: results,
+          metadata,
+          aiRecommendations,
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      // Log search completion
+      logger.info('Enhanced song search completed', {
+        query,
+        resultsCount: results.length,
+        totalProcessingTime,
+        aiProcessingTime: aiProcessingTime || 0,
+        hasAiRecommendations: !!aiRecommendations,
+        userId,
+        ip: req.ip
+      });
+
+      // Performance monitoring - warn if search is slow
+      if (totalProcessingTime > 200) {
+        logger.warn('Enhanced search performance warning', {
+          query,
+          processingTime: totalProcessingTime,
+          targetTime: 200,
+          aiEnabled: recommend,
+          aiProcessingTime,
+          userId,
+        });
+      }
+
+      res.status(200).json(response);
+    } catch (error) {
+      const processingTime = Date.now() - startTime;
+      
+      logger.error('Enhanced song search failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        query: req.query?.q,
+        userId: req.user?.id,
+        processingTime,
+        ip: req.ip
+      });
+
+      // Handle specific search service errors
+      if (error instanceof Error && error.message.includes('Query must be at least')) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: error.message,
+            field: 'query'
+          },
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      // Generic error response
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'ENHANCED_SEARCH_FAILED',
+          message: 'Enhanced search operation failed. Please try again later.'
         },
         timestamp: new Date().toISOString()
       });

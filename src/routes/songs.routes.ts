@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { authenticateToken } from '../middleware/auth.middleware';
-import { validateSearchQuery } from '../schemas/search.schemas';
+import { validateSearchQuery, validateEnhancedSearchQuery } from '../schemas/search.schemas';
 import { searchController } from '../controllers/search.controller';
 import { config } from '../config/environment';
 import logger from '../utils/logger';
@@ -141,6 +141,37 @@ router.get(
   
   // Handle suggestions request
   searchController.getSearchSuggestions
+);
+
+/**
+ * GET /search/enhanced
+ * Enhanced search for songs with fuzzy matching and optional AI recommendations
+ * 
+ * Query Parameters:
+ * - q: Search query (required, min 2 characters)
+ * - limit: Maximum results to return (optional, 1-50, default 20)
+ * - threshold: Similarity threshold (optional, 0.1-1.0, default 0.3)
+ * - enrich: Enable Spotify enrichment (optional, default false)
+ * - fresh: Bypass cache (optional, default false)
+ * - recommend: Enable AI recommendations (optional, default false)
+ * 
+ * Authentication: Required (Bearer token)
+ * Rate Limit: 30 requests per minute for authenticated users, 10 for anonymous
+ */
+router.get(
+  '/search/enhanced',
+  // Apply rate limiting first
+  searchRateLimit,
+  anonymousSearchRateLimit,
+  
+  // Require authentication  
+  authenticateToken,
+  
+  // Validate enhanced search query parameters
+  validateEnhancedSearchQuery,
+  
+  // Handle enhanced search request
+  searchController.enhancedSearchSongs
 );
 
 // Export the router

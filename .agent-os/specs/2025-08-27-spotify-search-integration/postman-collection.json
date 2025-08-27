@@ -1,0 +1,336 @@
+{
+  "info": {
+    "name": "Spotify Search Integration API Collection",
+    "description": "Postman collection for testing Spotify Search Integration endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "spotifyTrackId",
+      "value": "3BQHpFgAp4l80e1XslIjNI",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"SecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('authToken', response.data.tokens.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Enhanced Search",
+      "item": [
+        {
+          "name": "Search Local Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search/enhanced?q=beatles&limit=20&threshold=0.3",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search", "enhanced"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "beatles",
+                  "description": "Search query"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Max results to return"
+                },
+                {
+                  "key": "threshold",
+                  "value": "0.3",
+                  "description": "Similarity threshold"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search with Spotify",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search/enhanced?q=beatles yesterday&limit=20&threshold=0.3&enrich=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search", "enhanced"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "beatles yesterday",
+                  "description": "Search query"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Max results to return"
+                },
+                {
+                  "key": "threshold",
+                  "value": "0.3",
+                  "description": "Similarity threshold"
+                },
+                {
+                  "key": "enrich",
+                  "value": "true",
+                  "description": "Enable Spotify search"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search with Fresh Results",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search/enhanced?q=queen bohemian&limit=10&enrich=true&fresh=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search", "enhanced"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "queen bohemian",
+                  "description": "Search query"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Max results to return"
+                },
+                {
+                  "key": "enrich",
+                  "value": "true",
+                  "description": "Enable Spotify search"
+                },
+                {
+                  "key": "fresh",
+                  "value": "true",
+                  "description": "Bypass cache"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search with AI Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/search/enhanced?q=led zeppelin&enrich=true&recommend=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "search", "enhanced"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "led zeppelin",
+                  "description": "Search query"
+                },
+                {
+                  "key": "enrich",
+                  "value": "true",
+                  "description": "Enable Spotify search"
+                },
+                {
+                  "key": "recommend",
+                  "value": "true",
+                  "description": "Include AI recommendations"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Spotify Import",
+      "item": [
+        {
+          "name": "Import Spotify Track",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spotifyId\": \"{{spotifyTrackId}}\",\n  \"includeAudioFeatures\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/import-spotify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "import-spotify"]
+            }
+          }
+        },
+        {
+          "name": "Import Track Without Audio Features",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spotifyId\": \"11dFghVXANMlKmJXsNCbNl\",\n  \"includeAudioFeatures\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/import-spotify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "import-spotify"]
+            }
+          }
+        },
+        {
+          "name": "Import Invalid Track ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spotifyId\": \"invalid-id-format\",\n  \"includeAudioFeatures\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/songs/import-spotify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "songs", "import-spotify"]
+            },
+            "description": "Test error handling for invalid Spotify ID"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Spotify OAuth",
+      "item": [
+        {
+          "name": "Get Spotify Auth URL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spotify/auth-url",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spotify", "auth-url"]
+            }
+          }
+        },
+        {
+          "name": "Exchange Spotify Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"spotify_auth_code_here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spotify/callback",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spotify", "callback"]
+            },
+            "description": "Exchange Spotify authorization code for tokens"
+          }
+        }
+      ]
+    }
+  ]
+}
