@@ -12,15 +12,15 @@ Implement authentication API service layer to connect mobile app Zustand store w
 
 ### Phase 1: API Service Layer (Week 1)
 
-- [ ] **1. Create Authentication Service**
-  - [ ] 1.1 Create `/mobile/src/services/AuthService.ts` with axios HTTP client
-  - [ ] 1.2 Implement registerUser method with POST /api/v1/auth/register
-  - [ ] 1.3 Implement loginUser method with POST /api/v1/auth/login  
-  - [ ] 1.4 Implement refreshToken method with POST /api/v1/auth/refresh
-  - [ ] 1.5 Implement logout method with POST /api/v1/auth/logout
-  - [ ] 1.6 Implement logoutAll method with POST /api/v1/auth/logout-all
-  - [ ] 1.7 Add request/response interfaces matching backend API spec
-  - [ ] 1.8 Implement proper error handling for all HTTP status codes
+- [x] **1. Create Authentication Service**
+  - [x] 1.1 Create `/mobile/src/services/AuthService.ts` with axios HTTP client
+  - [x] 1.2 Implement registerUser method with POST /api/v1/auth/register
+  - [x] 1.3 Implement loginUser method with POST /api/v1/auth/login  
+  - [x] 1.4 Implement refreshToken method with POST /api/v1/auth/refresh
+  - [x] 1.5 Implement logout method with POST /api/v1/auth/logout
+  - [x] 1.6 Implement logoutAll method with POST /api/v1/auth/logout-all
+  - [x] 1.7 Add request/response interfaces matching backend API spec
+  - [x] 1.8 Implement proper error handling for all HTTP status codes
 
 - [ ] **2. Token Management System**
   - [ ] 2.1 Create TokenManager utility for secure token storage

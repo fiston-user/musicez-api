@@ -19,8 +19,12 @@ export interface AuthResponse {
   success: true;
   data: {
     user: User;
-    accessToken: string;
-    refreshToken: string;
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      tokenType: string;
+    };
   };
   timestamp: string;
 }
@@ -32,8 +36,12 @@ export interface RefreshTokenRequest {
 export interface RefreshTokenResponse {
   success: true;
   data: {
-    accessToken: string;
-    refreshToken: string;
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      tokenType: string;
+    };
   };
   timestamp: string;
 }
